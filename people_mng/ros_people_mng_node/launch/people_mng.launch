@@ -1,0 +1,9 @@
+<launch>
+
+  
+  <rosparam file="$(find ros_people_mng_node)/config/common_people_mng.yaml" />
+  <node pkg="ros_people_mng_node" type="PeopleMngNode.py" name="PeopleMngNode"  output="screen" >
+
+  </node>
+
+</launch>
