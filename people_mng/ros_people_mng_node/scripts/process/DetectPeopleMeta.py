@@ -8,8 +8,10 @@ from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
+import random
 
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Point32
 from openpose_ros_srvs.srv import DetectPeoplePoseFromImg
 from ros_color_detection_srvs.srv import DetectColorFromImg
 
@@ -19,8 +21,11 @@ from ros_people_mng_srvs.srv import ProcessPeopleFromImg
 from ros_openpose_gossip_srvs.srv import OpenPoseGossip
 
 from FaceDetectionModule import FaceDetectionModule
+from PersonMetaInfo import PersonMetaInfo
+
 
 class DetectPeopleMeta():
+    
 
     def __init__(self):
         self.configure()
@@ -51,8 +56,9 @@ class DetectPeopleMeta():
         except Exception as e:
             rospy.logwarn("Service detect_color_srv call failed: %s" % e)
 
-       
         self._faceProcess=FaceDetectionModule()
+
+        self._bridge = CvBridge()
 
         ## wait for gossip pose detection
         #try:
@@ -65,8 +71,8 @@ class DetectPeopleMeta():
     def callOpenpose(self,img):
         try:
             resp1 = self._openPoseSrv(img)
-            rospy.loginfo("nb people")
-            rospy.loginfo( "service:"+str(resp1.personList))
+            rospy.loginfo("-------------------  NB PEOPLE: "+str(len(resp1.personList.persons))+"-----------------------")
+            #rospy.loginfo( "service:"+str(len(resp1.personList))
             return resp1.personList
         except rospy.ServiceException, e:
              rospy.logwarn("Service call failed: %s"+str(e))
@@ -75,8 +81,8 @@ class DetectPeopleMeta():
     def callGossipPose(self,persons):
         try:
             resp1 = self._gossipPoseSrv(persons)
-            rospy.loginfo("Pose Gossip Of Service")
-            rospy.loginfo( "service:"+str(resp1))
+            #rospy.loginfo("Pose Gossip Of Service")
+            #rospy.loginfo( "service:"+str(resp1))
             return resp1
         except rospy.ServiceException, e:
              rospy.logwarn("Service call failed: %s"+str(e))
@@ -87,40 +93,121 @@ class DetectPeopleMeta():
             resp1 = self._colorDetectionSrv(img)
             rospy.loginfo("Colors")
             rospy.loginfo( "main:"+str(resp1.main_color))
-            rospy.loginfo( "colors:"+str(resp1.main_colors))
+            #rospy.loginfo( "colors:"+str(resp1.main_colors))
             return resp1
         except rospy.ServiceException, e:
              rospy.logwarn("Service call failed: %s"+str(e))
              return None
 
     def processImg(self,img):
+        personMetoInfoMap={}
+        ################################
+        ####  PROCESS OVERALL IMG   #### 
+        ################################
         rospy.loginfo("------- Process Data: OPENPOSE -------")
         persons=self.callOpenpose(img)
         persons.image_w=img.width
         persons.image_h=img.height
-        rospy.loginfo(persons)
+        #rospy.loginfo(persons)
         if persons == None:
              return
-        rospy.loginfo(persons)
+        #rospy.loginfo(persons)
 
 
         rospy.loginfo("------- Process Data: GOSSIP POSE -------")
         gossip_pose=self.callGossipPose(persons)
         if gossip_pose == None:
-            #TODO
-            pass
-        rospy.loginfo(gossip_pose)
+            return
+        #rospy.loginfo(gossip_pose)
+ 
+        for person in gossip_pose.personsGossip.personsGossip:
+            ################################
+            ####   PROCESS ONE PERSON   #### 
+            ################################
+            current_person=PersonMetaInfo(person.id)
+            current_person.posture=person.posture
+            current_person.handCall=person.handCall
+            current_person.distanceEval=person.distanceEval
 
-        rospy.loginfo("------- Process Data: COLOR DETECTION -------")
-        #CAUTION On execution per person per body focus
-        dominant_color=self.callColorDetection(img)
-        if dominant_color == None:
-            #TODO
-            pass
-        rospy.loginfo(dominant_color.main_color)
+            ### FIXME TO REMOVE ONLY FOR TEST 
+            #x0,y0=self.getRandomPt(img.height,img.width)
+            #x1=x0+30
+            #y1=y0+40
+            #pt1=Point32()
+            #pt1.x=x0
+            #pt1.y=y0
+#
+            #pt2=Point32()
+            #pt2.x=x1
+            #pt2.y=y1
+            #person.shirtRect.points.append(pt1)
+            #person.shirtRect.points.append(pt2)
+            ### END FIXME TO REMOVE ONLY FOR TEST 
 
-        rospy.loginfo("------- Process Data: FACE DETECTION -------")
-        #CAUTION On execution per person
-        self._faceProcess.processFaceOnImg(img,'JSA2')
+            # convert image msg to cv img for crop purpose
+            cv_image = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
 
-        pass
+            if len(person.shirtRect.points) ==2 :
+                current_person.setBoundingBox(PersonMetaInfo.SHIRT_RECT,person.shirtRect.points)
+                #Get main color
+                ## crop image with given point the startY and endY coordinates, followed by the startX and endX
+                #imCrop = im[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+                #cv_image = bridge.imgmsg_to_cv2(img, desired_encoding="passthrough")
+                imCrop = cv_image[int(person.shirtRect.points[0].y):int(person.shirtRect.points[1].y), int(person.shirtRect.points[0].x):int(person.shirtRect.points[1].x)]
+                #rospy.loginfo(imCrop)
+
+                if imCrop.size !=0:
+                    #convert cv image to image msg to send to service
+                    imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8") 
+                    rospy.loginfo("-----------        shirtRect               ----------------")
+                    dominant_color=self.callColorDetection(imCrop_msg)
+                    current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color.main_color.color_name,dominant_color.main_color.rgb)
+                else:
+                    rospy.logwarn("Cop Img =[]")
+
+            if len(person.trouserRect.points) ==2 :
+                current_person.setBoundingBox(PersonMetaInfo.TROUSER_RECT,person.trouserRect.points)
+                #Get main color
+                ## crop image with given point the startY and endY coordinates, followed by the startX and endX
+                #imCrop = im[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+                imCrop = cv_image[int(person.trouserRect.points[0].y):int(person.trouserRect.points[1].y), int(person.trouserRect.points[0].x):int(person.trouserRect.points[1].x)]
+                #convert cv image to image msg to send to service
+                #rospy.loginfo("PT1")
+                #rospy.loginfo(person.trouserRect.points[0])
+                #rospy.loginfo("PT2")
+                #rospy.loginfo(person.trouserRect.points[1])
+                #rospy.loginfo(imCrop)
+                if imCrop.size !=0:
+                    imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8") 
+                    rospy.loginfo("-----------        trouserRect               ----------------")
+                    dominant_color=self.callColorDetection(imCrop_msg)
+                    current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color.main_color.color_name,dominant_color.main_color.rgb)
+                else:
+                    rospy.logwarn("Cop Img =[]")
+
+            #if len(person.people.points) ==2 :
+            #   imCrop = im[int(person.people.points[0].y):int(person.people.points[1].y), int(person.people.points[0].x):int(person.people.points[1].x)]
+            #   label self._faceProcess.detectFaceOnImg(imCrop)
+            #   if label != None:
+            #       current_person.label_id=label 
+            
+            personMetoInfoMap[current_person.id]=current_person
+            rospy.loginfo("DETECTED PEOPLE")
+            rospy.loginfo(personMetoInfoMap)
+
+        #rospy.loginfo("------- Process Data: COLOR DETECTION -------")
+        ##CAUTION On execution per person per body focus
+        #dominant_color=self.callColorDetection(img)
+        #if dominant_color == None:
+        #    #TODO
+        #    pass
+        #rospy.loginfo(dominant_color.main_color)
+
+        #rospy.loginfo("------- Process Data: FACE DETECTION -------")
+        ##CAUTION On execution per person
+        #self._faceProcess.processFaceOnImg(img,'JSA2')
+
+    def getRandomPt(self,h,w):
+        x=random.uniform(0, h)
+        y=random.uniform(0, w)
+        return x,y

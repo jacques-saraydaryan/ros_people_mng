@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     std_msgs
     sensor_msgs
+    geometry_msgs
     actionlib_msgs 
     actionlib
     ros_people_mng_msgs
