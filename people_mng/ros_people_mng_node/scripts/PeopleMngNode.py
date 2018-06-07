@@ -18,7 +18,7 @@ from ros_people_mng_msgs.msg import PeopleMetaInfo,PeopleMetaInfoList
 from ros_people_mng_actions.msg import ProcessPeopleFromImgAction,ProcessPeopleFromImgResult
 from ros_people_mng_srvs.srv import ProcessPeopleFromImg
 
-from process.DetectPeopleMeta import DetectPeopleMeta
+from process.DetectPeopleMeta import DetectPeopleMeta,PersonMetaInfo
 
 
 class PeopleMngNode():
@@ -53,11 +53,17 @@ class PeopleMngNode():
         pass
     
     def detectPeopleMetaSrvCallback(self,req):
-        self._detect_people_meta.processImg(req.img)
-        #TODO
-        #main,colorDlist=self.processImg(req.img)
-        #return {'main_color':main,'main_colors':colorDlist}
-        pass
+
+        peopleMetaInfoList=PeopleMetaInfoList()
+        people_list=[]
+        result=self._detect_people_meta.processImg(req.img)
+        for person in result.values():
+            rospy.logwarn('-')
+            rospy.logwarn(str(person))
+            current_peopleMeta=self.convertPeoplToRosMsg(person)
+            people_list.append(current_peopleMeta)
+        peopleMetaInfoList.peopleList=people_list
+        return peopleMetaInfoList
         
 
     def processImg(self, img):
@@ -84,6 +90,16 @@ class PeopleMngNode():
         pass
 
 
+    def convertPeoplToRosMsg(self,people):
+        current_people=PeopleMetaInfo()
+        current_people.id=str(people.id)
+        current_people.label_id=people.label_id
+        current_people.handCall=people.handCall
+        current_people.posture=people.posture
+        current_people.distanceEval=people.distanceEval
+        current_people.shirt_color_name=people.getMainColor(PersonMetaInfo.SHIRT_RECT)
+        current_people.trouser_color_name=people.getMainColor(PersonMetaInfo.TROUSER_RECT)
+        return current_people
 
 
 def main():

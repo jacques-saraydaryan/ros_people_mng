@@ -194,7 +194,7 @@ class DetectPeopleMeta():
             personMetoInfoMap[current_person.id]=current_person
             rospy.loginfo("DETECTED PEOPLE")
             rospy.loginfo(personMetoInfoMap)
-
+        
         #rospy.loginfo("------- Process Data: COLOR DETECTION -------")
         ##CAUTION On execution per person per body focus
         #dominant_color=self.callColorDetection(img)
@@ -206,6 +206,8 @@ class DetectPeopleMeta():
         #rospy.loginfo("------- Process Data: FACE DETECTION -------")
         ##CAUTION On execution per person
         #self._faceProcess.processFaceOnImg(img,'JSA2')
+
+        return personMetoInfoMap
 
     def getRandomPt(self,h,w):
         x=random.uniform(0, h)
