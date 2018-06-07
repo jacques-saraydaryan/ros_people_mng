@@ -49,17 +49,23 @@ class PeopleMngNode():
 
 
     def rgb_callback(self, data):
-        #TODO
-        pass
+        #FIXME need to protect to avoid concurrency?
+        self.current_img=data
+        
     
     def detectPeopleMetaSrvCallback(self,req):
+        image_to_process=''
+        if len(req.img.goal.data) == 0:
+            image_to_process=self.current_img
+        else:
+            image_to_process=req.img
 
         peopleMetaInfoList=PeopleMetaInfoList()
         people_list=[]
-        result=self._detect_people_meta.processImg(req.img)
+        result=self._detect_people_meta.processImg(image_to_process)
         for person in result.values():
-            rospy.logwarn('-')
-            rospy.logwarn(str(person))
+            #rospy.logwarn('-')
+            #rospy.logwarn(str(person))
             current_peopleMeta=self.convertPeoplToRosMsg(person)
             people_list.append(current_peopleMeta)
         peopleMetaInfoList.peopleList=people_list
@@ -72,14 +78,27 @@ class PeopleMngNode():
 
 
     def executePeopleMetaActionServer(self, goal):
-        
+        image_to_process=''
+        #rospy.logwarn(goal.img)
+        if len(goal.img.data) == 0:
+            image_to_process=self.current_img
+        else:
+            image_to_process=goal.img
+
+
         isActionSucceed=False
         action_result = ProcessPeopleFromImgResult()
         try:
-        #TODO
-        #    main,colorDlist =self.processImg(goal.img)
-        #    action_result.main_color=main
-        #    action_result.main_colors=colorDlist
+            peopleMetaInfoList=PeopleMetaInfoList()
+            people_list=[]
+            result=self._detect_people_meta.processImg(image_to_process)
+            for person in result.values():
+                rospy.logwarn('-')
+                rospy.logwarn(str(person))
+                current_peopleMeta=self.convertPeoplToRosMsg(person)
+                people_list.append(current_peopleMeta)
+            peopleMetaInfoList.peopleList=people_list
+            action_result.peopleMetaList=peopleMetaInfoList
             isActionSucceed=True
         except Exception as e:
             rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(action_result), str(e))
