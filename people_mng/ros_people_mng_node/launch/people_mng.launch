@@ -13,7 +13,7 @@
   </include>
 
   <rosparam file="$(find ros_color_detection_node)/config/common_color.yaml" />
-  <node pkg="ros_color_detection_node" type="ColorDetectionNode.py" name="ColorDetectionNode"  output="screen" >
+  <node pkg="ros_color_detection_node" type="ColorDetectionNode.py" name="ColorDetectionNode"  output="log" >
   </node>
   
   <node pkg="ros_openpose_gossip_node" type="OpenPoseGossip_node.py" name="OpenPoseGossip_node"  output="screen" >
@@ -21,8 +21,8 @@
 
 
   <rosparam file="$(find ros_people_mng_node)/config/common_people_mng.yaml" />
-  <node pkg="ros_people_mng_node" type="PeopleMngNode.py" name="PeopleMngNode"  output="screen" >
-      <remap from="image" to="$(arg camera_topic)"/>
-  </node>
+   <node pkg="ros_people_mng_node" type="PeopleMngNode.py" name="PeopleMngNode"  output="screen" > 
+      <remap from="image" to="$(arg camera_topic)"/> 
+  </node> 
 
 </launch>

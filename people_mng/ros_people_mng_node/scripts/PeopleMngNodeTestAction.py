@@ -15,23 +15,23 @@ def LoadImgAndUseAction():
     test_folder=rospy.get_param('imgtest_folder','../data')
 
     #Load Image
-    #img_loaded1 = cv2.imread(test_folder+'/group-in-line.jpg')
+    img_loaded1 = cv2.imread(test_folder+'/group-in-line.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
-    img_loaded1 = cv2.imread(test_folder+'/couple_raph.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/couple_raph.jpg')
 
     
     msg_im1 = _bridge.cv2_to_imgmsg(img_loaded1, encoding="bgr8")   
-
+#
     client = actionlib.SimpleActionClient('detect_people_meta_action', ProcessPeopleFromImgAction)
-
+#
     client.wait_for_server()
-
+#
     goal = ProcessPeopleFromImgGoal(img=msg_im1)
-
+#
     client.send_goal(goal)
-
+#
     client.wait_for_result()
-
+#
     content_result=client.get_result()
     rospy.loginfo(content_result)
 

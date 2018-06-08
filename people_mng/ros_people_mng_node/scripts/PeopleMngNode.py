@@ -93,8 +93,8 @@ class PeopleMngNode():
             people_list=[]
             result=self._detect_people_meta.processImg(image_to_process)
             for person in result.values():
-                rospy.logwarn('-')
-                rospy.logwarn(str(person))
+                rospy.logdebug('-')
+                rospy.logdebug(str(person))
                 current_peopleMeta=self.convertPeoplToRosMsg(person)
                 people_list.append(current_peopleMeta)
             peopleMetaInfoList.peopleList=people_list

@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
 import random
+import copy
 
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point32
@@ -91,8 +92,8 @@ class DetectPeopleMeta():
     def callColorDetection(self,img):
         try:
             resp1 = self._colorDetectionSrv(img)
-            rospy.loginfo("Colors")
-            rospy.loginfo( "main:"+str(resp1.main_color))
+            #rospy.loginfo("Colors")
+            #rospy.loginfo( "main:"+str(resp1.main_color))
             #rospy.loginfo( "colors:"+str(resp1.main_colors))
             return resp1
         except rospy.ServiceException, e:
@@ -159,9 +160,14 @@ class DetectPeopleMeta():
                 if imCrop.size !=0:
                     #convert cv image to image msg to send to service
                     imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8") 
-                    rospy.loginfo("-----------        shirtRect               ----------------")
-                    dominant_color=self.callColorDetection(imCrop_msg)
-                    current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color.main_color.color_name,dominant_color.main_color.rgb)
+                    
+                    dominant_color1=self.callColorDetection(imCrop_msg)
+
+                    #current_person.colorNameMap[PersonMetaInfo.SHIRT_RECT]=dominant_color1.main_color.color_name
+                    #current_person.colorRGBMap[PersonMetaInfo.SHIRT_RECT]=dominant_color1.main_color.rgb
+
+                    current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_color.color_name,dominant_color1.main_color.rgb)
+                    rospy.loginfo("id:"+str(current_person.id)+"-shirtRect-color:"+str(dominant_color1.main_color.color_name))
                 else:
                     rospy.logwarn("Cop Img =[]")
 
@@ -179,9 +185,14 @@ class DetectPeopleMeta():
                 #rospy.loginfo(imCrop)
                 if imCrop.size !=0:
                     imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8") 
-                    rospy.loginfo("-----------        trouserRect               ----------------")
-                    dominant_color=self.callColorDetection(imCrop_msg)
-                    current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color.main_color.color_name,dominant_color.main_color.rgb)
+                    rospy.logdebug("-----------        trouserRect               ----------------")
+                    dominant_color2=self.callColorDetection(imCrop_msg)
+
+                    #current_person.colorNameMap[PersonMetaInfo.TROUSER_RECT]=dominant_color2.main_color.color_name
+                    #current_person.colorRGBMap[PersonMetaInfo.TROUSER_RECT]=dominant_color2.main_color.rgb
+
+                    current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_color.color_name,dominant_color2.main_color.rgb)
+                    rospy.loginfo("id:"+str(current_person.id)+"-trouserRect-color:"+str(dominant_color2.main_color.color_name))
                 else:
                     rospy.logwarn("Cop Img =[]")
 
@@ -191,9 +202,9 @@ class DetectPeopleMeta():
             #   if label != None:
             #       current_person.label_id=label 
             
-            personMetoInfoMap[current_person.id]=current_person
-            rospy.loginfo("DETECTED PEOPLE")
-            rospy.loginfo(personMetoInfoMap)
+                personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
+            rospy.loginfo("DETECTED PEOPLE ")
+            rospy.logdebug(personMetoInfoMap)
         
         #rospy.loginfo("------- Process Data: COLOR DETECTION -------")
         ##CAUTION On execution per person per body focus
