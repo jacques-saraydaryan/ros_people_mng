@@ -36,14 +36,14 @@ def LoadImgAndUseAction():
     rospy.loginfo(content_result)
 
 
-    goal = ProcessPeopleFromImgGoal()
+    goal2 = ProcessPeopleFromImgGoal()
 
-    client.send_goal(goal)
+    client.send_goal(goal2)
 
     client.wait_for_result()
 
-    content_result=client.get_result()
-    rospy.loginfo(content_result)
+    content_result2=client.get_result()
+    rospy.loginfo(content_result2)
 
 
 if __name__ == '__main__':

@@ -39,6 +39,8 @@ class PeopleMngNode():
         self._actionServer = actionlib.SimpleActionServer('detect_people_meta_action', ProcessPeopleFromImgAction, self.executePeopleMetaActionServer, False)
         self._actionServer.start()
 
+        self.current_img=None
+
         rospy.spin()
 
 
@@ -81,7 +83,12 @@ class PeopleMngNode():
         image_to_process=''
         #rospy.logwarn(goal.img)
         if len(goal.img.data) == 0:
-            image_to_process=self.current_img
+            if self.current_img != None:
+                image_to_process=self.current_img
+            else:
+                 rospy.logwarn("current_img is currently no set, no image to process")
+                 self._actionServer.set_aborted()
+                 return
         else:
             image_to_process=goal.img
 
@@ -106,7 +113,6 @@ class PeopleMngNode():
             self._actionServer.set_succeeded(action_result)
         else:
             self._actionServer.set_aborted()
-        pass
 
 
     def convertPeoplToRosMsg(self,people):
