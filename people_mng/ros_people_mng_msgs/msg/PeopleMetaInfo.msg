@@ -3,7 +3,7 @@ string id
 #id of the face detection
 string label_id
 # given by gossip node
-bool handCall
+string[] handPosture
 # given by gossip node could be standing, sitting, lying
 string posture
 # given by gossid node, distance estimation only through 2d image

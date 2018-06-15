@@ -119,7 +119,7 @@ class PeopleMngNode():
         current_people=PeopleMetaInfo()
         current_people.id=str(people.id)
         current_people.label_id=people.label_id
-        current_people.handCall=people.handCall
+        current_people.handPosture=people.handPosture
         current_people.posture=people.posture
         current_people.distanceEval=people.distanceEval
         current_people.shirt_color_name=people.getMainColor(PersonMetaInfo.SHIRT_RECT)

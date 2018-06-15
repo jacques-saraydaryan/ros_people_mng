@@ -127,7 +127,7 @@ class DetectPeopleMeta():
             ################################
             current_person=PersonMetaInfo(person.id)
             current_person.posture=person.posture
-            current_person.handCall=person.handCall
+            current_person.handPosture=person.handPosture
             current_person.distanceEval=person.distanceEval
 
             ### FIXME TO REMOVE ONLY FOR TEST 
@@ -202,9 +202,9 @@ class DetectPeopleMeta():
             #   if label != None:
             #       current_person.label_id=label 
             
-                personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
-            rospy.loginfo("DETECTED PEOPLE ")
-            rospy.logdebug(personMetoInfoMap)
+            personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
+        rospy.loginfo("DETECTED PEOPLE ")
+        rospy.logdebug(personMetoInfoMap)
         
         #rospy.loginfo("------- Process Data: COLOR DETECTION -------")
         ##CAUTION On execution per person per body focus
