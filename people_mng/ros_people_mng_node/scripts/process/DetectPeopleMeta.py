@@ -148,6 +148,9 @@ class DetectPeopleMeta():
             # convert image msg to cv img for crop purpose
             cv_image = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
 
+
+            rospy.loginfo("------- Process Data: Main Color Detection -------")
+
             if len(person.shirtRect.points) ==2 :
                 current_person.setBoundingBox(PersonMetaInfo.SHIRT_RECT,person.shirtRect.points)
                 #Get main color
@@ -200,23 +203,19 @@ class DetectPeopleMeta():
             #   imCrop = im[int(person.people.points[0].y):int(person.people.points[1].y), int(person.people.points[0].x):int(person.people.points[1].x)]
             #   label self._faceProcess.detectFaceOnImg(imCrop)
             #   if label != None:
-            #       current_person.label_id=label 
+            #       current_person.label_id=label
+
+            rospy.loginfo("------- Process Data: FACE DETECTION -------")
+            imCropP = cv_image[int(person.boundingBox.points[0].y):int(person.boundingBox.points[1].y), int(person.boundingBox.points[0].x):int(person.boundingBox.points[1].x)]
+            #cv2.imshow('image',imCropP)
+            #cv2.waitKey(0)
+            msg_im = self._bridge.cv2_to_imgmsg(imCropP, encoding="bgr8")
+            label = self._faceProcess.detectFaceOnImg(msg_im)
+            current_person.label_id=str(label)
             
             personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
         rospy.loginfo("DETECTED PEOPLE ")
-        rospy.logdebug(personMetoInfoMap)
-        
-        #rospy.loginfo("------- Process Data: COLOR DETECTION -------")
-        ##CAUTION On execution per person per body focus
-        #dominant_color=self.callColorDetection(img)
-        #if dominant_color == None:
-        #    #TODO
-        #    pass
-        #rospy.loginfo(dominant_color.main_color)
-
-        #rospy.loginfo("------- Process Data: FACE DETECTION -------")
-        ##CAUTION On execution per person
-        #self._faceProcess.processFaceOnImg(img,'JSA2')
+        rospy.logdebug(personMetoInfoMap)      
 
         return personMetoInfoMap
 

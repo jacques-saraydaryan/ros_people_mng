@@ -16,9 +16,10 @@ def LoadImgAndUseAction():
 
     #Load Image
     #img_loaded1 = cv2.imread(test_folder+'/group-in-line.jpg')
-    #img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
-    #img_loaded1 = cv2.imread(test_folder+'/couple_raph.jpg')
-    img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
+    img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/couple.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
+    
 
     
     msg_im1 = _bridge.cv2_to_imgmsg(img_loaded1, encoding="bgr8")   

@@ -13,6 +13,10 @@
     <arg name="active_face" value="$(arg active_face)"/>
   </include>
 
+<include file="$(find people_face_identification)/launch/face_identification.launch">
+</include>
+
+
   <rosparam file="$(find ros_color_detection_node)/config/common_color.yaml" />
   <node pkg="ros_color_detection_node" type="ColorDetectionNode.py" name="ColorDetectionNode"  output="log" >
   </node>
@@ -22,8 +26,10 @@
 
 
   <rosparam file="$(find ros_people_mng_node)/config/common_people_mng.yaml" />
+  
    <node pkg="ros_people_mng_node" type="PeopleMngNode.py" name="PeopleMngNode"  output="screen" > 
       <remap from="image" to="$(arg camera_topic)"/> 
   </node> 
+  
 
 </launch>
