@@ -20,7 +20,7 @@ from ros_people_mng_srvs.srv import ProcessPeopleFromImg
 
 from process.DetectPeopleMeta import DetectPeopleMeta,PersonMetaInfo
 from process.DisplayMetaData import DisplayMetaData
-
+from geometry_msgs.msg import Point32
 
 class PeopleMngNode():
 
@@ -69,7 +69,7 @@ class PeopleMngNode():
                 current_peopleMeta=self.convertPeoplToRosMsg(person)
                 people_list.append(current_peopleMeta)
             peopleMetaInfoList.peopleList=people_list
-
+            peopleMetaInfoList.img=image_to_process
             #publish metaData
             self.pub_people_meta_info.publish(peopleMetaInfoList)
 
@@ -106,7 +106,6 @@ class PeopleMngNode():
         #TODO
         pass
 
-
     def executePeopleMetaActionServer(self, goal):
         image_to_process=''
         #rospy.logwarn(goal.img)
@@ -119,8 +118,6 @@ class PeopleMngNode():
                  return
         else:
             image_to_process=goal.img
-
-
         isActionSucceed=False
         action_result = ProcessPeopleFromImgResult()
         try:
@@ -142,7 +139,6 @@ class PeopleMngNode():
         else:
             self._actionServer.set_aborted()
 
-
     def convertPeoplToRosMsg(self,people):
         rospy.logdebug(people)
         current_people=PeopleMetaInfo()
@@ -161,6 +157,10 @@ class PeopleMngNode():
         current_people_details.trouserRect.points=people.getBoundingBox(PersonMetaInfo.TROUSER_RECT)
         current_people_details.trouserColorList=people.getColorList(PersonMetaInfo.TROUSER_RECT)
         current_people.details=current_people_details
+        pt = Point32()
+        pt.x = people.position_x
+        pt.y = people.position_y
+        current_people.point2Map=pt
         return current_people
 
 

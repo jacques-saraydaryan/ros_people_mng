@@ -1,13 +1,11 @@
 #!/usr/bin/env python  
-__author__ ='Jacques Saraydaryan'
+__author__ = 'Jacques Saraydaryan'
 
-
-
-
+import rospy
 from sensor_msgs.msg import Image
 from ros_people_mng_msgs.msg import PeopleMetaInfoDetails,PeopleMetaInfo,PeopleMetaInfoList
 from process.PeopleMetaTrackerMng import PeopleMetaTrackerMng
-import rospy
+
 
 class PeopleMngNode:
 
@@ -25,6 +23,7 @@ class PeopleMngNode:
     def detect_people_meta_callback(self,req):
         #rospy.loginfo("--------------------> Get data into tracker")
         self.tracker.track_people(req.peopleList)
+        #req.img --> image to display meta info
 
 
 def main():

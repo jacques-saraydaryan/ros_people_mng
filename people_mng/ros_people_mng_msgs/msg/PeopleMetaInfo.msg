@@ -10,6 +10,8 @@ string[] handPosture
 string posture
 # given by gossid node, distance estimation only through 2d image
 float32 distanceEval
+geometry_msgs/Point32   point2Map  # XY coordinates of the person's neck, parallel to the map
+
 # given by color detection node, color name of the shirt
 string shirt_color_name
 # given by color detection node, trouser name of the shirt

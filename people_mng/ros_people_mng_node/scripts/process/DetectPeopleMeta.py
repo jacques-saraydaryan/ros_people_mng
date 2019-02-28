@@ -130,6 +130,7 @@ class DetectPeopleMeta():
             current_person.handPosture=person.handPosture
             current_person.distanceEval=person.distanceEval
             current_person.setBoundingBox(PersonMetaInfo.PERSON_RECT,person.boundingBox.points)
+            current_person.setPosition(person.Cam2MapXYPoint.x,person.Cam2MapXYPoint.y)
 
             ### FIXME TO REMOVE ONLY FOR TEST 
             #x0,y0=self.getRandomPt(img.height,img.width)
