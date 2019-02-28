@@ -7,6 +7,10 @@ from cv_bridge import CvBridge, CvBridgeError
 import cv2
 from  ros_people_mng_actions.msg import ProcessPeopleFromImgAction, ProcessPeopleFromImgGoal
 import actionlib
+import operator
+from process.DisplayMetaData import DisplayMetaData
+
+
 
 
 def LoadImgAndUseAction():
@@ -14,18 +18,32 @@ def LoadImgAndUseAction():
     _bridge = CvBridge()
     test_folder=rospy.get_param('imgtest_folder','../data')
 
+    displayMETA=DisplayMetaData(test_folder+"/icon/",False,True,True)
+
     #Load Image
     #img_loaded1 = cv2.imread(test_folder+'/group-in-line.jpg')
-    img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/couple.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/imgMulti4.png')
+    #img_loaded1 = cv2.imread(test_folder+'/large-people.jpg')
+    img_loaded1 = cv2.imread(test_folder+'/large-people2.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/multiple_isolate2.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/multiple_isolated1.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/multiple_isolated3.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper5.png')
+    #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper4.png')
+
     
+
+
+    rospy.loginfo("File tested: "+str(test_folder+'/group-diff-position.jpg'))
 
     
     msg_im1 = _bridge.cv2_to_imgmsg(img_loaded1, encoding="bgr8")   
 #
     client = actionlib.SimpleActionClient('detect_people_meta_action', ProcessPeopleFromImgAction)
-#
+#DisplayMetaData
     client.wait_for_server()
 #
     goal = ProcessPeopleFromImgGoal(img=msg_im1)
@@ -37,6 +55,8 @@ def LoadImgAndUseAction():
     content_result=client.get_result()
     rospy.loginfo(content_result)
 
+    displayMETA.displayResult(content_result.peopleMetaList,img_loaded1)
+
 
     goal2 = ProcessPeopleFromImgGoal()
 
@@ -46,7 +66,7 @@ def LoadImgAndUseAction():
 
     content_result2=client.get_result()
     rospy.loginfo(content_result2)
-
+    
 
 if __name__ == '__main__':
     try:

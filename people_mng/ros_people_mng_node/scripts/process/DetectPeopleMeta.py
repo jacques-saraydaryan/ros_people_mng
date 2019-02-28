@@ -129,6 +129,7 @@ class DetectPeopleMeta():
             current_person.posture=person.posture
             current_person.handPosture=person.handPosture
             current_person.distanceEval=person.distanceEval
+            current_person.setBoundingBox(PersonMetaInfo.PERSON_RECT,person.boundingBox.points)
 
             ### FIXME TO REMOVE ONLY FOR TEST 
             #x0,y0=self.getRandomPt(img.height,img.width)
@@ -150,6 +151,8 @@ class DetectPeopleMeta():
 
 
             rospy.loginfo("------- Process Data: Main Color Detection -------")
+            rospy.logdebug("COLOR DETECTION: PERSON:")
+            rospy.logdebug(person)
 
             if len(person.shirtRect.points) ==2 :
                 current_person.setBoundingBox(PersonMetaInfo.SHIRT_RECT,person.shirtRect.points)
@@ -170,9 +173,10 @@ class DetectPeopleMeta():
                     #current_person.colorRGBMap[PersonMetaInfo.SHIRT_RECT]=dominant_color1.main_color.rgb
 
                     current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_color.color_name,dominant_color1.main_color.rgb)
+                    current_person.setColorList(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_colors.colorList)
                     rospy.loginfo("id:"+str(current_person.id)+"-shirtRect-color:"+str(dominant_color1.main_color.color_name))
                 else:
-                    rospy.logwarn("Cop Img =[]")
+                    rospy.logwarn("Crop Img =[]")
 
             if len(person.trouserRect.points) ==2 :
                 current_person.setBoundingBox(PersonMetaInfo.TROUSER_RECT,person.trouserRect.points)
@@ -195,9 +199,10 @@ class DetectPeopleMeta():
                     #current_person.colorRGBMap[PersonMetaInfo.TROUSER_RECT]=dominant_color2.main_color.rgb
 
                     current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_color.color_name,dominant_color2.main_color.rgb)
+                    current_person.setColorList(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_colors.colorList)
                     rospy.loginfo("id:"+str(current_person.id)+"-trouserRect-color:"+str(dominant_color2.main_color.color_name))
                 else:
-                    rospy.logwarn("Cop Img =[]")
+                    rospy.logwarn("Crop Img =[]")
 
             #if len(person.people.points) ==2 :
             #   imCrop = im[int(person.people.points[0].y):int(person.people.points[1].y), int(person.people.points[0].x):int(person.people.points[1].x)]
@@ -206,13 +211,19 @@ class DetectPeopleMeta():
             #       current_person.label_id=label
 
             rospy.loginfo("------- Process Data: FACE DETECTION -------")
-            imCropP = cv_image[int(person.boundingBox.points[0].y):int(person.boundingBox.points[1].y), int(person.boundingBox.points[0].x):int(person.boundingBox.points[1].x)]
-            #cv2.imshow('image',imCropP)
-            #cv2.waitKey(0)
-            msg_im = self._bridge.cv2_to_imgmsg(imCropP, encoding="bgr8")
-            label = self._faceProcess.detectFaceOnImg(msg_im)
-            current_person.label_id=str(label)
-            
+            rospy.logdebug("FACE DETECTION: BOUNDING BOX:")
+            rospy.logdebug(person)
+            if len(person.boundingBox.points) !=0:
+                imCropP = cv_image[int(person.boundingBox.points[0].y):int(person.boundingBox.points[1].y), int(person.boundingBox.points[0].x):int(person.boundingBox.points[1].x)]
+                #cv2.imshow('image',imCropP)
+                #cv2.waitKey(0)
+                msg_im = self._bridge.cv2_to_imgmsg(imCropP, encoding="bgr8")
+                label, score = self._faceProcess.detectFaceOnImg(msg_im)
+                current_person.label_id=str(label)
+                current_person.label_score=score
+            else:
+                rospy.logwarn("No bounding box for person:"+str(person.id))
+
             personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
         rospy.loginfo("DETECTED PEOPLE ")
         rospy.logdebug(personMetoInfoMap)      

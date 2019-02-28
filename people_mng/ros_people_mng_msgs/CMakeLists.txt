@@ -12,12 +12,14 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     std_msgs
     sensor_msgs
+    ros_color_detection_msgs
     message_generation
 )
 
 add_message_files(FILES
   PeopleMetaInfo.msg
   PeopleMetaInfoList.msg
+  PeopleMetaInfoDetails.msg
 )
 
 
@@ -26,6 +28,7 @@ add_message_files(FILES
    DEPENDENCIES
    std_msgs
    sensor_msgs
+   ros_color_detection_msgs
  )
 
 

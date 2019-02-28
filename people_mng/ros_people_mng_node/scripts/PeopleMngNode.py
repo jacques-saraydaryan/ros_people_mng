@@ -14,11 +14,12 @@ from sensor_msgs.msg import Image
 from openpose_ros_srvs.srv import DetectPeoplePoseFromImg
 from ros_color_detection_srvs.srv import DetectColorFromImg
 
-from ros_people_mng_msgs.msg import PeopleMetaInfo,PeopleMetaInfoList
+from ros_people_mng_msgs.msg import PeopleMetaInfoDetails,PeopleMetaInfo,PeopleMetaInfoList
 from ros_people_mng_actions.msg import ProcessPeopleFromImgAction,ProcessPeopleFromImgResult
 from ros_people_mng_srvs.srv import ProcessPeopleFromImg
 
 from process.DetectPeopleMeta import DetectPeopleMeta,PersonMetaInfo
+from process.DisplayMetaData import DisplayMetaData
 
 
 class PeopleMngNode():
@@ -31,6 +32,7 @@ class PeopleMngNode():
         # Subscribe to the image 
         self.sub_rgb = rospy.Subscriber("/image", Image, self.rgb_callback, queue_size=1)
         self.pub_people_meta_info = rospy.Publisher("/people_meta_info", PeopleMetaInfoList, queue_size=1)
+        self.pub_people_meta_info_img = rospy.Publisher("/people_meta_info_img", Image, queue_size=1)
 
         #declare ros service 
         self.detectPeopleMetaSrv = rospy.Service('detect_people_meta_srv', ProcessPeopleFromImg, self.detectPeopleMetaSrvCallback)
@@ -47,12 +49,38 @@ class PeopleMngNode():
     def configure(self):
         self._bridge = CvBridge()
         self._detect_people_meta=DetectPeopleMeta()
+        data_folder=rospy.get_param('imgtest_folder','../data')
+        self.displayMetaData=DisplayMetaData(data_folder+"/icon/",False,True,False)
         
 
 
     def rgb_callback(self, data):
         #FIXME need to protect to avoid concurrency?
         self.current_img=data
+        image_to_process= self.current_img
+        rospy.logwarn("IAMHERE------------------------")
+        try:
+            peopleMetaInfoList=PeopleMetaInfoList()
+            people_list=[]
+            result=self._detect_people_meta.processImg(image_to_process)
+            for person in result.values():
+                rospy.logdebug('-')
+                rospy.logdebug(str(person))
+                current_peopleMeta=self.convertPeoplToRosMsg(person)
+                people_list.append(current_peopleMeta)
+            peopleMetaInfoList.peopleList=people_list
+
+            #publish metaData
+            self.pub_people_meta_info.publish(peopleMetaInfoList)
+
+            #compute display
+            cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
+            cv_img_to_display =self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
+            msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")   
+            #publish image with MetaData
+            self.pub_people_meta_info_img.publish(msg_img)
+        except Exception as e:
+            rospy.logwarn("unable to find or launch function corresponding :, error:[%s]", str(e))
         
     
     def detectPeopleMetaSrvCallback(self,req):
@@ -116,14 +144,23 @@ class PeopleMngNode():
 
 
     def convertPeoplToRosMsg(self,people):
+        rospy.logdebug(people)
         current_people=PeopleMetaInfo()
         current_people.id=str(people.id)
         current_people.label_id=people.label_id
+        current_people.label_score=people.label_score
         current_people.handPosture=people.handPosture
         current_people.posture=people.posture
         current_people.distanceEval=people.distanceEval
         current_people.shirt_color_name=people.getMainColor(PersonMetaInfo.SHIRT_RECT)
         current_people.trouser_color_name=people.getMainColor(PersonMetaInfo.TROUSER_RECT)
+        current_people_details=PeopleMetaInfoDetails()
+        current_people_details.boundingBox.points=people.getBoundingBox(PersonMetaInfo.PERSON_RECT)
+        current_people_details.shirtRect.points=people.getBoundingBox(PersonMetaInfo.SHIRT_RECT)
+        current_people_details.shirtColorList=people.getColorList(PersonMetaInfo.SHIRT_RECT)
+        current_people_details.trouserRect.points=people.getBoundingBox(PersonMetaInfo.TROUSER_RECT)
+        current_people_details.trouserColorList=people.getColorList(PersonMetaInfo.TROUSER_RECT)
+        current_people.details=current_people_details
         return current_people
 
 

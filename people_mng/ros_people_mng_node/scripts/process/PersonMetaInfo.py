@@ -14,12 +14,14 @@ class PersonMetaInfo():
     colorRGBMap={}
     distanceEval=0
     label_id=''
+    label_score=0.0
     
     def __init__(self,id):
         self.id=id
         self.boundingBoxMap={}
         self.colorNameMap={}
         self.colorRGBMap={}
+        self.colorList={}
 
     def setBoundingBox(self,nameKey,ptList):
         try:
@@ -27,17 +29,39 @@ class PersonMetaInfo():
         except Exception as e:
             rospy.logwarn("Unable to add bounding box:"+str(e))
 
+    def getBoundingBox(self,nameKey):
+        value=[]
+        try:
+            value=self.boundingBoxMap[nameKey]
+        except Exception as e:
+            rospy.logwarn("Unable to get bounding box:"+str(e))
+        return value
+
     def setMainColor(self,nameKey,color_label,rgb_value):
         try:
             self.colorNameMap[nameKey]=color_label
             self.colorRGBMap[nameKey]=rgb_value
         except Exception as e:
             rospy.logwarn("Unable to add color:"+str(e))
-
     def getMainColor(self,nameKey):
         value='NONE'
         try:
             value=self.colorNameMap[nameKey]
+            
+        except Exception as e:
+            rospy.logwarn("Unable to get color:"+str(e))
+        return value
+
+    def setColorList(self,nameKey, colorDList):
+        try:
+            self.colorList[nameKey]=colorDList
+        except Exception as e:
+            rospy.logwarn("Unable to add color list:"+str(e))
+
+    def getColorList(self,nameKey):
+        value=[]
+        try:
+            value=self.colorList[nameKey]
             
         except Exception as e:
             rospy.logwarn("Unable to get color:"+str(e))
