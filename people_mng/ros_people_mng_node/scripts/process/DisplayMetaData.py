@@ -6,6 +6,7 @@ import rospy
 import cv2
 import operator
 import webcolors
+from PersonMetaInfo import PersonMetaInfo
 
 class DisplayMetaData:
     PEOPLE_LABEL_UNKNOW="Unknwon"
@@ -95,7 +96,23 @@ class DisplayMetaData:
 
         return img
 
+    def displayTrackerResult(self, tracked_people_list, img):
+        for tracked_people in tracked_people_list:
+            points=tracked_people.getBoundingBox(PersonMetaInfo.PERSON_RECT).points
+            if tracked_people.label_id != self.PEOPLE_LABEL_UNKNOW and tracked_people.label_id != self.PEOPLE_LABEL_NONE:
+                self.createRec(img, points, self.COLOR_1, 10)
+            else:
+                self.createRec(img, points, self.COLOR_2, 2)
 
+            self.putTrackedPeopleTxt(img,points,tracked_people,(255,255,255))
+
+        if self.isWaiting:
+            cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('image', 600, 600)
+            cv2.imshow('image', img)
+            cv2.waitKey(0)
+
+        return img
 
     def createRec(self, img,points,(B,G,R),size):
         if len(points)>=2:
@@ -228,12 +245,35 @@ class DisplayMetaData:
             except Exception as e:
                 print 'unable to display icon'+str(e)
 
-         
+    def putTrackedPeopleTxt(self, img, points, tracked_people, (R, G, B)):
+        if len(points)>=2:
+            y_offset=10
+            space_row=2
+            cv2.rectangle(img, (int(round(points[0].x)), int(round(points[0].y))-y_offset*3-5), (int(round(points[0].x))+100, int(round(points[0].y))), (0,0,0),  cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(img, "ID: "+tracked_people.id,(int(round(points[0].x)), int(round(points[0].y))), font, 0.4, (255, 255, 255), 1)
+            #delta_y=delta_y+10
+
+            # if(len(label)>10):
+            #      label=people.label_id[0:10]
+            cv2.putText(img, "WEIGHT: "+str(tracked_people.weight),(int(round(points[0].x)), int(round(points[0].y))-y_offset-space_row), font, 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "TTL: "+str(round(tracked_people.ttl,1)),(int(round(points[0].x)), int(round(points[0].y))-y_offset*2-5), font, 0.4, (255, 255, 255), 1)
+            delta_y = int(round(points[0].y))
+            y_offset=10
+            cv2.rectangle(img, (int(round(points[1].x)+2), delta_y), (int(round(points[1].x))+80, delta_y+12*5), (0,0,0),  cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(img, "SCORE: " + str(round(tracked_people.last_score, 2)),
+                        (int(round(points[1].x)), delta_y + 12), font, 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "FACE: "+str(round(tracked_people.last_score_face,2)),(int(round(points[1].x)), delta_y+12*2), font, 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "COl_S: "+str(round(tracked_people.last_score_c_s,2)),(int(round(points[1].x)), delta_y + 12*3), font, 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "COL_T: "+str(round(tracked_people.last_score_c_t,2)),(int(round(points[1].x)), delta_y + 12*4), font, 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "POSE: "+str(round(tracked_people.last_score_pose,2)),(int(round(points[1].x)), delta_y + 12*5), font, 0.4, (255, 255, 255), 1)
 
     def putTxtIDLabel(self, img,points,people,(R,G,B)):
         if len(points)>=2:
             y_offset=10
             space_row=2
+
             cv2.rectangle(img, (int(round(points[0].x)), int(round(points[0].y))-y_offset*3-5), (int(round(points[0].x))+100, int(round(points[0].y))), (0,0,0),  cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
             cv2.putText(img, "ID: "+people.id,(int(round(points[0].x)), int(round(points[0].y))), font, 0.4, (255, 255, 255), 1)

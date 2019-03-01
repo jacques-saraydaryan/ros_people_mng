@@ -28,13 +28,14 @@ from PersonMetaInfo import PersonMetaInfo
 class DetectPeopleMeta():
     
 
-    def __init__(self):
+    def __init__(self,is_face_bounding_box_used):
+        self.is_face_bounding_box_used=is_face_bounding_box_used
         self.configure()
         
     def configure(self):
         ## wait for openpose joints detection
         try:
-            rospy.wait_for_service('/people_pose_from_img',5)
+            rospy.wait_for_service('/people_pose_from_img',50)
             rospy.loginfo("service people_pose_from_img READY")
             self._openPoseSrv = rospy.ServiceProxy('people_pose_from_img', DetectPeoplePoseFromImg)
         except Exception as e:
@@ -101,10 +102,14 @@ class DetectPeopleMeta():
              return None
 
     def processImg(self,img):
+        start_time=time.time()
         personMetoInfoMap={}
         ################################
         ####  PROCESS OVERALL IMG   #### 
         ################################
+        rospy.logwarn("---------------------------------------------------:NEW PROCESS-----:" + str(
+            round(time.time() - start_time, 3)) + "s")
+        start_time=time.time()
         rospy.loginfo("------- Process Data: OPENPOSE -------")
         persons=self.callOpenpose(img)
         persons.image_w=img.width
@@ -114,6 +119,9 @@ class DetectPeopleMeta():
              return
         #rospy.loginfo(persons)
 
+        rospy.logwarn("---------------------------------------------------:OPENPOSE: timeElasped since last operation:" + str(
+            round(time.time() - start_time, 3)) + "s")
+        start_time = time.time()
 
         rospy.loginfo("------- Process Data: GOSSIP POSE -------")
         gossip_pose=self.callGossipPose(persons)
@@ -150,7 +158,10 @@ class DetectPeopleMeta():
             # convert image msg to cv img for crop purpose
             cv_image = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
 
-
+            rospy.logwarn(
+                "---------------------------------------------------: GOSSIP: timeElasped since last operation:" + str(
+                    round(time.time() - start_time, 3)) + "s")
+            start_time = time.time()
             rospy.loginfo("------- Process Data: Main Color Detection -------")
             rospy.logdebug("COLOR DETECTION: PERSON:")
             rospy.logdebug(person)
@@ -211,23 +222,42 @@ class DetectPeopleMeta():
             #   if label != None:
             #       current_person.label_id=label
 
+            rospy.logwarn(
+                "---------------------------------------------------: COLOR timeElasped since last operation:" + str(
+                    round(time.time() - start_time, 3)) + "s")
+            start_time = time.time()
             rospy.loginfo("------- Process Data: FACE DETECTION -------")
             rospy.logdebug("FACE DETECTION: BOUNDING BOX:")
             rospy.logdebug(person)
-            if len(person.boundingBox.points) !=0:
-                imCropP = cv_image[int(person.boundingBox.points[0].y):int(person.boundingBox.points[1].y), int(person.boundingBox.points[0].x):int(person.boundingBox.points[1].x)]
+            isImgFace = False
+            if self.is_face_bounding_box_used:
+                target_box = person.headRect.points
+                isImgFace = True
+            else:
+                target_box = person.boundingBox.points
+
+
+
+            if len(target_box) !=0:
+                imCropP = cv_image[int(target_box[0].y):int(target_box[1].y), int(target_box[0].x):int(target_box[1].x)]
                 #cv2.imshow('image',imCropP)
                 #cv2.waitKey(0)
                 msg_im = self._bridge.cv2_to_imgmsg(imCropP, encoding="bgr8")
-                label, score = self._faceProcess.detectFaceOnImg(msg_im)
+                label, score = self._faceProcess.detectFaceOnImg(msg_im,isImgFace)
                 current_person.label_id=str(label)
                 current_person.label_score=score
             else:
-                rospy.logwarn("No bounding box for person:"+str(person.id))
+                rospy.logwarn("No head bounding box for person:"+str(person.id))
+                current_person.label_id = str('None')
+                current_person.label_score = 0.0
 
             personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
         rospy.loginfo("DETECTED PEOPLE ")
-        rospy.logdebug(personMetoInfoMap)      
+        rospy.logdebug(personMetoInfoMap)
+
+        rospy.logwarn("---------------------------------------------------: FACE: timeElasped since last operation:" + str(
+            round(time.time() - start_time, 3)) + "s")
+        start_time = time.time()
 
         return personMetoInfoMap
 

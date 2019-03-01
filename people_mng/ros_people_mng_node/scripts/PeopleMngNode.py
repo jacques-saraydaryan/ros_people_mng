@@ -47,8 +47,10 @@ class PeopleMngNode():
 
 
     def configure(self):
+        self.is_face_bounding_box_used=rospy.get_param('/is_face_bounding_box_used',False)
+        rospy.loginfo("Param: is_face_bounding_box_used:"+str(self.is_face_bounding_box_used))
         self._bridge = CvBridge()
-        self._detect_people_meta=DetectPeopleMeta()
+        self._detect_people_meta=DetectPeopleMeta(self.is_face_bounding_box_used)
         data_folder=rospy.get_param('imgtest_folder','../data')
         self.displayMetaData=DisplayMetaData(data_folder+"/icon/",False,True,False)
         
@@ -58,7 +60,8 @@ class PeopleMngNode():
         #FIXME need to protect to avoid concurrency?
         self.current_img=data
         image_to_process= self.current_img
-        rospy.logwarn("IAMHERE------------------------")
+        start_time=time.time()
+        rospy.logwarn("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
         try:
             peopleMetaInfoList=PeopleMetaInfoList()
             people_list=[]
@@ -71,6 +74,7 @@ class PeopleMngNode():
             peopleMetaInfoList.peopleList=people_list
             peopleMetaInfoList.img=image_to_process
             #publish metaData
+            rospy.logwarn( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
             self.pub_people_meta_info.publish(peopleMetaInfoList)
 
             #compute display

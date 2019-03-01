@@ -2,28 +2,47 @@
 __author__ = 'Jacques Saraydaryan'
 
 import rospy
+from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from ros_people_mng_msgs.msg import PeopleMetaInfoDetails,PeopleMetaInfo,PeopleMetaInfoList
 from process.PeopleMetaTrackerMng import PeopleMetaTrackerMng
+from process.DisplayMetaData import DisplayMetaData
 
 
 class PeopleMngNode:
 
     def __init__(self):
         rospy.init_node('people_mng_tracker', anonymous=False)
+        data_folder = rospy.get_param('imgtest_folder', '../data')
 
+
+        self._bridge = CvBridge()
         self.tracker = PeopleMetaTrackerMng()
+        self.display=DisplayMetaData(data_folder+"/icon/",False,True,False)
 
         # Subscribe to the image 
         self.sub_rgb = rospy.Subscriber("/people_meta_info", PeopleMetaInfoList, self.detect_people_meta_callback, queue_size=1)
-        self.pub_people_meta_info = rospy.Publisher("/people_meta_info_tracked", PeopleMetaInfoList, queue_size=1)
+        self.pub_people_meta_info = rospy.Publisher("/tracked_people_meta_info", PeopleMetaInfoList, queue_size=1)
+        self.pub_people_meta_info_img = rospy.Publisher("/tracked_people_meta_info_img", Image, queue_size=1)
         rospy.spin()
+        rospy.loginfo("Exiting tracker...")
+        self.tracker.stop_forgetting_function()
 
 
     def detect_people_meta_callback(self,req):
         #rospy.loginfo("--------------------> Get data into tracker")
-        self.tracker.track_people(req.peopleList)
+        tracked_people_list=self.tracker.track_people(req.peopleList)
+
         #req.img --> image to display meta info
+        cv_image = self._bridge.imgmsg_to_cv2(req.img, desired_encoding="bgr8")
+        #cv_img_people = self.display.displayResult(req, cv_image)
+        cv_img_people_tracker = self.display.displayTrackerResult(tracked_people_list, cv_image)
+        msg_img = self._bridge.cv2_to_imgmsg(cv_img_people_tracker, encoding="bgr8")
+        # publish image with MetaData
+        self.pub_people_meta_info_img.publish(msg_img)
+
+
+
 
 
 def main():

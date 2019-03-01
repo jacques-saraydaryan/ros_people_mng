@@ -12,6 +12,12 @@ class TrackedPersonMetaInfo(PersonMetaInfo):
     current_y = 0
     current_z = 0
     weight = 0
+    ttl=0
+    last_score=0
+    last_score_face=0
+    last_score_c_s=0
+    last_score_c_t=0
+    last_score_pose=0
 
     def __init__(self, id, label_id, score, body_bounding_box, shirt_bounding_box, trouser_bounding_box,
                  shirt_color_list, trouser_color_list):

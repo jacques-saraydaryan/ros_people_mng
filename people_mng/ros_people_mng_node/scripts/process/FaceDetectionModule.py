@@ -40,9 +40,9 @@ class FaceDetectionModule():
              rospy.logwarn("Service call failed: %s"+str(e))
              return None
 
-    def detectFaceOnImg(self,img):
+    def detectFaceOnImg(self,img,isImgFace):
         try:
-            resp1=self._detectFromImgSrv(img,False)
+            resp1=self._detectFromImgSrv(img,isImgFace)
             if len(resp1.entityList.entity2DList) >0:
                 rospy.loginfo("Detect Name:"+str(resp1.entityList.entity2DList[0].label))
                 rospy.loginfo(resp1.entityList.entity2DList[0])

@@ -9,7 +9,9 @@ from PersonMetaInfo import PersonMetaInfo
 class PeopleMetaSimilarity:
     WEIGHT_FACE_SCORE = 10
     WEIGHT_COLOR_SCORE = 3
-    WEIGHT_POSE_SCORE = 2
+    WEIGHT_POSE_SCORE = 5
+
+    DISTANCE_FONCTION_THRESHOLD = 2
 
     def __init__(self):
         pass
@@ -29,23 +31,25 @@ class PeopleMetaSimilarity:
         score_face = self.compute_face_score(people, tracked_people)
 
         score_color_shirt = self.compute_color_score(
-                                                        people.details.shirtColorList,
-                                                        tracked_people.getColorList(PersonMetaInfo.SHIRT_RECT)
-                                                    )
+            people.details.shirtColorList,
+            tracked_people.getColorList(PersonMetaInfo.SHIRT_RECT)
+        )
 
         score_color_trouser = self.compute_color_score(
-                                                        people.details.trouserColorList,
-                                                        tracked_people.getColorList(PersonMetaInfo.TROUSER_RECT)
-                                                      )
+            people.details.trouserColorList,
+            tracked_people.getColorList(PersonMetaInfo.TROUSER_RECT)
+        )
 
         score_pose = self.compute_pose_distance(people, tracked_people, x, y, z)
 
-        return (
+        rospy.loginfo("----SCORE:  Face:" + str(score_face) + ", COLOR SHIRT:" + str(score_color_shirt) + ", COLOR_TROUSER:" + str(score_color_trouser) + ", POSE:"+str(score_pose))
+        final_score = (
                        self.WEIGHT_FACE_SCORE * score_face + self.WEIGHT_COLOR_SCORE * score_color_shirt +
                        self.WEIGHT_COLOR_SCORE * score_color_trouser + self.WEIGHT_POSE_SCORE * score_pose
                ) / (
                        self.WEIGHT_FACE_SCORE + self.WEIGHT_COLOR_SCORE * 2 + self.WEIGHT_POSE_SCORE
-                    )
+               )
+        return final_score,score_face,score_color_shirt,score_color_trouser,score_pose
 
     def compute_face_score(self, people, tracked_people):
         """
@@ -75,17 +79,17 @@ class PeopleMetaSimilarity:
         if len(people_color_list) == 0 or len(tracked_people_color_list) == 0:
             return 0
 
-
         people_hsv = self.get_max_hsv_color(people_color_list)
         tracked_people_hsv = self.get_max_hsv_color(tracked_people_color_list)
 
         # https://stackoverflow.com/questions/35113979/calculate-distance-between-colors-in-hsv-space
-        dh = min(abs(people_hsv[0] - tracked_people_hsv[0]), 360 - abs(people_hsv[0] - tracked_people_hsv[0]))/float(360)
-        #ds = abs(people_hsv[1] - tracked_people_hsv[1])/float(100)
-        #dv = abs(people_hsv[2] - tracked_people_hsv[2]) / float(255)
+        dh = min(abs(people_hsv[0] - tracked_people_hsv[0]), 360 - abs(people_hsv[0] - tracked_people_hsv[0])) / float(
+            360)
+        # ds = abs(people_hsv[1] - tracked_people_hsv[1])/float(100)
+        # dv = abs(people_hsv[2] - tracked_people_hsv[2]) / float(255)
 
-        #distance = math.sqrt(dh * dh + ds * ds + dv * dv)
-        return 1-dh
+        # distance = math.sqrt(dh * dh + ds * ds + dv * dv)
+        return 1 - dh
 
     def get_max_hsv_color(self, colorList):
         """
@@ -108,15 +112,18 @@ class PeopleMetaSimilarity:
 
     def compute_pose_distance(self, people, tracked_people, x, y, z):
         """
-
-        :param people:
-        :param tracked_people:
-        :param x:
-        :param y:
-        :param z:
-        :return:
+        :param people: current people
+        :param tracked_people: evaluated tracked people
+        :param x: current people x
+        :param y: current people y
+        :param z: current people z
+        :return: distance score
         """
+        distance = math.sqrt(pow(tracked_people.current_x - x, 2) + pow(tracked_people.current_y - y, 2) + pow(
+            tracked_people.current_z - z, 2))
+
+        result = math.exp(distance * float(-1) / float(self.DISTANCE_FONCTION_THRESHOLD))
 
         # TODO to complete according to last registered pose and time elapsed,
-        # compute the coehrence of getting new x, y, z pose (into the map frame)
-        return 0
+
+        return result

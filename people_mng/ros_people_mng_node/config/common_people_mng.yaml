@@ -1,3 +1,4 @@
 kmean_cluster: 3
 imgtest_folder: "/home/jsaraydaryan/ros_robotcupathome_ws/src/robocup_pepper-people_mng/people_mng/ros_people_mng_node/data"
 is_process_displayed: True
+is_face_bounding_box_used: False
