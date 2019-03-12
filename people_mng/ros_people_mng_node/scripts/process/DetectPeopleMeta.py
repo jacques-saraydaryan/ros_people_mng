@@ -73,7 +73,7 @@ class DetectPeopleMeta():
     def callOpenpose(self,img):
         try:
             resp1 = self._openPoseSrv(img)
-            rospy.loginfo("-------------------  NB PEOPLE: "+str(len(resp1.personList.persons))+"-----------------------")
+            rospy.logdebug("-------------------  NB PEOPLE: "+str(len(resp1.personList.persons))+"-----------------------")
             #rospy.loginfo( "service:"+str(len(resp1.personList))
             return resp1.personList
         except rospy.ServiceException, e:
@@ -107,10 +107,10 @@ class DetectPeopleMeta():
         ################################
         ####  PROCESS OVERALL IMG   #### 
         ################################
-        rospy.logwarn("---------------------------------------------------:NEW PROCESS-----:" + str(
+        rospy.logdebug("---------------------------------------------------:NEW PROCESS-----:" + str(
             round(time.time() - start_time, 3)) + "s")
         start_time=time.time()
-        rospy.loginfo("------- Process Data: OPENPOSE -------")
+        rospy.logdebug("------- Process Data: OPENPOSE -------")
         persons=self.callOpenpose(img)
         persons.image_w=img.width
         persons.image_h=img.height
@@ -119,11 +119,11 @@ class DetectPeopleMeta():
              return
         #rospy.loginfo(persons)
 
-        rospy.logwarn("---------------------------------------------------:OPENPOSE: timeElasped since last operation:" + str(
+        rospy.logdebug("---------------------------------------------------:OPENPOSE: timeElasped since last operation:" + str(
             round(time.time() - start_time, 3)) + "s")
         start_time = time.time()
 
-        rospy.loginfo("------- Process Data: GOSSIP POSE -------")
+        rospy.logdebug("------- Process Data: GOSSIP POSE -------")
         gossip_pose=self.callGossipPose(persons)
         if gossip_pose == None:
             return
@@ -138,7 +138,7 @@ class DetectPeopleMeta():
             current_person.handPosture=person.handPosture
             current_person.distanceEval=person.distanceEval
             current_person.setBoundingBox(PersonMetaInfo.PERSON_RECT,person.boundingBox.points)
-            current_person.setPosition(person.Cam2MapXYPoint.x,person.Cam2MapXYPoint.y)
+            current_person.setPosition(person.pose)
 
             ### FIXME TO REMOVE ONLY FOR TEST 
             #x0,y0=self.getRandomPt(img.height,img.width)
@@ -158,15 +158,15 @@ class DetectPeopleMeta():
             # convert image msg to cv img for crop purpose
             cv_image = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
 
-            rospy.logwarn(
+            rospy.logdebug(
                 "---------------------------------------------------: GOSSIP: timeElasped since last operation:" + str(
                     round(time.time() - start_time, 3)) + "s")
             start_time = time.time()
-            rospy.loginfo("------- Process Data: Main Color Detection -------")
+            rospy.logdebug("------- Process Data: Main Color Detection -------")
             rospy.logdebug("COLOR DETECTION: PERSON:")
             rospy.logdebug(person)
 
-            if len(person.shirtRect.points) ==2 :
+            if len(person.shirtRect.points) == 2 :
                 current_person.setBoundingBox(PersonMetaInfo.SHIRT_RECT,person.shirtRect.points)
                 #Get main color
                 ## crop image with given point the startY and endY coordinates, followed by the startX and endX
@@ -186,7 +186,7 @@ class DetectPeopleMeta():
 
                     current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_color.color_name,dominant_color1.main_color.rgb)
                     current_person.setColorList(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_colors.colorList)
-                    rospy.loginfo("id:"+str(current_person.id)+"-shirtRect-color:"+str(dominant_color1.main_color.color_name))
+                    rospy.logdebug("id:"+str(current_person.id)+"-shirtRect-color:"+str(dominant_color1.main_color.color_name))
                 else:
                     rospy.logwarn("Crop Img =[]")
 
@@ -212,7 +212,7 @@ class DetectPeopleMeta():
 
                     current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_color.color_name,dominant_color2.main_color.rgb)
                     current_person.setColorList(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_colors.colorList)
-                    rospy.loginfo("id:"+str(current_person.id)+"-trouserRect-color:"+str(dominant_color2.main_color.color_name))
+                    rospy.logdebug("id:"+str(current_person.id)+"-trouserRect-color:"+str(dominant_color2.main_color.color_name))
                 else:
                     rospy.logwarn("Crop Img =[]")
 
@@ -222,11 +222,11 @@ class DetectPeopleMeta():
             #   if label != None:
             #       current_person.label_id=label
 
-            rospy.logwarn(
+            rospy.logdebug(
                 "---------------------------------------------------: COLOR timeElasped since last operation:" + str(
                     round(time.time() - start_time, 3)) + "s")
             start_time = time.time()
-            rospy.loginfo("------- Process Data: FACE DETECTION -------")
+            rospy.logdebug("------- Process Data: FACE DETECTION -------")
             rospy.logdebug("FACE DETECTION: BOUNDING BOX:")
             rospy.logdebug(person)
             isImgFace = False
@@ -252,10 +252,10 @@ class DetectPeopleMeta():
                 current_person.label_score = 0.0
 
             personMetoInfoMap[current_person.id]=copy.deepcopy(current_person)
-        rospy.loginfo("DETECTED PEOPLE ")
+        rospy.logdebug("DETECTED PEOPLE ")
         rospy.logdebug(personMetoInfoMap)
 
-        rospy.logwarn("---------------------------------------------------: FACE: timeElasped since last operation:" + str(
+        rospy.logdebug("---------------------------------------------------: FACE: timeElasped since last operation:" + str(
             round(time.time() - start_time, 3)) + "s")
         start_time = time.time()
 

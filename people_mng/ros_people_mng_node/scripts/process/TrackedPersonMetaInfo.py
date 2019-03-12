@@ -8,9 +8,6 @@ class TrackedPersonMetaInfo(PersonMetaInfo):
     ROLE_PERSON_OF_INTEREST = "PERSON_OF_INTEREST"
     role = 0
     last_update_time = 0
-    current_x = 0
-    current_y = 0
-    current_z = 0
     weight = 0
     ttl=0
     last_score=0
@@ -34,12 +31,10 @@ class TrackedPersonMetaInfo(PersonMetaInfo):
         self.incWeight()
 
     def getPose(self):
-        return self.current_x, self.current_y, self.current_z
+        return self.pose
 
-    def setPose(self, x, y, z):
-        self.current_x = x
-        self.current_y = y
-        self.current_z = z
+    def setPose(self, pose):
+        self.pose=pose
         self.last_update_time = time.time()
 
     def incWeight(self):

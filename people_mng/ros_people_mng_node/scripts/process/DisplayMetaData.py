@@ -7,6 +7,7 @@ import cv2
 import operator
 import webcolors
 from PersonMetaInfo import PersonMetaInfo
+from visualization_msgs.msg import Marker, MarkerArray
 
 class DisplayMetaData:
     PEOPLE_LABEL_UNKNOW="Unknwon"
@@ -32,17 +33,36 @@ class DisplayMetaData:
     ICON_HAND_CROSS="pHandCrossb.png"
     ICON_UNKNOWN="pUndefined20b.png"
 
+    MESH_STANDING = "package://ros_people_mng_node/data/peopleStanding3.dae"
+    MESH_SITTING = "package://ros_people_mng_node/data/peopleSitting2.dae"
+    MESH_LYING = "package://ros_people_mng_node/data/peopleStanding2.dae"
+    MESH_HAND_LEFT_CALL = "package://ros_people_mng_node/data/peopleCallLeft.dae"
+    MESH_HAND_LEFT_POINTING = "package://ros_people_mng_node/data/peoplePointingLeft.dae"
+    MESH_HAND_RIGHT_CALL = "package://ros_people_mng_node/data/peopleCallRight.dae"
+    MESH_HAND_RIGHT_POINTING = "package://ros_people_mng_node/data/peoplePointingRight.dae"
+    MESH_SITTING_HAND_LEFT_CALL = "package://ros_people_mng_node/data/peopleSittingcallLeft.dae"
+    MESH_SITTING_HAND_LEFT_POINTING = "package://ros_people_mng_node/data/peopleSittingPointingLeft.dae"
+    MESH_SITTING_HAND_RIGHT_CALL = "package://ros_people_mng_node/data/peopleSittingcallRight.dae"
+    MESH_SITTING_HAND_RIGHT_POINTING = "package://ros_people_mng_node/data/peopleSittingPointingRight.dae"
+    MESH_SITTING_HAND_CROSS = "package://ros_people_mng_node/data/peopleSittingCrossed.dae"
+    MESH_HAND_CROSS = "package://ros_people_mng_node/data/peopleStandingCrossed.dae"
+    MESH_UNKNOWN = "package://ros_people_mng_node/data/peopleStanding3.dae"
+
     COLOR_1=(0,255,0)
     COLOR_2=(0,0,255)
 
     def __init__(self,icon_folder,isProportionDisplayed,isColorRecDisplayer,isWaiting):
         self.iconMap={}
+        self.meshMap={}
         self.icon_folder=icon_folder
         self.isProportionDisplayed=isProportionDisplayed
         self.isColorRecDisplayer=isColorRecDisplayer
         self.isWaiting=isWaiting
+        self.marker_id_map={}
+        self.marker_id_counter=0
 
         self.loadIcons()
+        self.loadMesh()
 
 
     def loadIcons(self):
@@ -56,7 +76,22 @@ class DisplayMetaData:
         self.iconMap[self.PEOPLE_HAND_CROSSED]=cv2.imread(self.icon_folder+self.ICON_HAND_CROSS)
         self.iconMap[self.UNKNOWN]=cv2.imread(self.icon_folder+self.ICON_UNKNOWN)
 
+    def loadMesh(self):
+        self.meshMap[self.PEOPLE_STANDING]=self.MESH_STANDING
+        self.meshMap[self.PEOPLE_SITTING]=self.MESH_SITTING
+        self.meshMap[self.PEOPLE_LYING]=self.MESH_LYING
+        self.meshMap[self.PEOPLE_HAND_LEFT_CALL]=self.MESH_HAND_RIGHT_CALL
+        self.meshMap[self.PEOPLE_HAND_LEFT_POINTING]=self.MESH_HAND_RIGHT_POINTING
+        self.meshMap[self.PEOPLE_HAND_RIGHT_CALL]=self.MESH_HAND_LEFT_CALL
+        self.meshMap[self.PEOPLE_HAND_RIGHT_POINTING]=self.MESH_HAND_LEFT_POINTING
+        self.meshMap[self.PEOPLE_HAND_CROSSED]=self.MESH_HAND_CROSS
+        self.meshMap[self.UNKNOWN]=self.MESH_UNKNOWN
 
+        self.meshMap[self.MESH_SITTING_HAND_LEFT_CALL] = self.MESH_SITTING_HAND_RIGHT_CALL
+        self.meshMap[self.MESH_SITTING_HAND_LEFT_POINTING] = self.MESH_SITTING_HAND_RIGHT_POINTING
+        self.meshMap[self.MESH_SITTING_HAND_RIGHT_CALL] = self.MESH_SITTING_HAND_LEFT_CALL
+        self.meshMap[self.MESH_SITTING_HAND_RIGHT_POINTING] = self.MESH_SITTING_HAND_LEFT_POINTING
+        self.meshMap[self.MESH_SITTING_HAND_CROSS] = self.MESH_SITTING_HAND_CROSS
 
     def displayResult(self,content_result,img):  
         for people in content_result.peopleList: 
@@ -71,8 +106,11 @@ class DisplayMetaData:
                 self.displayIconHandLeftPosture(img,people.details.boundingBox.points,people,0,0)
                 self.displayIconHandRightPosture(img,people.details.boundingBox.points,people,20,20)
 
+            font = cv2.FONT_HERSHEY_DUPLEX
             self.displayColorRec(img,people.details.boundingBox.points,people.details.shirtColorList,20,0)
+            cv2.putText(img, people.shirt_color_name, (int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12),  font, 0.5, (0, 0, 0), 1)
             self.displayColorRec(img,people.details.boundingBox.points,people.details.trouserColorList,20,0)
+            cv2.putText(img, people.trouser_color_name,(int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12), font, 0.5, (0, 0, 0), 1)
             
             if  self.isColorRecDisplayer:
                 if  self.isProportionDisplayed:
@@ -113,6 +151,107 @@ class DisplayMetaData:
             cv2.waitKey(0)
 
         return img
+
+
+    def displayTracker3DMarker(self, tracked_people_list,frame_id):
+        marker_array=MarkerArray()
+        for tracked_people in tracked_people_list:
+            marker_id=0
+            try:
+                marker_id= self.marker_id_map[tracked_people.id]
+            except KeyError as e:
+                self.marker_id_counter=self.marker_id_counter+1
+                marker_id=self.marker_id_counter
+                self.marker_id_map[tracked_people.id]=marker_id
+
+            markerA=self.displayTrackerMarkerArrow(tracked_people,frame_id,marker_id)
+            marker_array.markers.append(markerA)
+            markerM=self.displayTrackerMarkerMesh(tracked_people,frame_id,marker_id+1000)
+            marker_array.markers.append(markerM)
+
+        return marker_array
+
+
+
+    def displayTrackerMarkerArrow(self, tracked_people,frame_id,marker_id):
+        marker=Marker()
+        marker.header.frame_id=frame_id
+        # marker.header.stamp=rospy.get_time()
+        marker.ns = "tracker-people"
+        marker.lifetime=rospy.Duration.from_sec(5)
+        # marker.id = tracked_people.id
+        # marker id must be integer
+        marker.id = marker_id
+        marker.type = Marker.ARROW
+        marker.action = Marker.ADD
+        marker.pose=tracked_people.pose
+        marker.scale.x = 0.5
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+        marker.color.a = 1.0
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+
+        return marker
+
+
+    def displayTrackerMarkerMesh(self, tracked_people,frame_id,marker_id):
+        mesh_file=""
+        if tracked_people.posture == self.PEOPLE_STANDING:
+            mesh_file=self.meshMap[self.PEOPLE_STANDING]
+            #rospy.logwarn("hand[0] :" + tracked_people.handPosture[0]+", hand[1]"+tracked_people.handPosture[1])
+            if tracked_people.handPosture[1] == self.PEOPLE_HAND_CALL:
+                mesh_file = self.meshMap[self.PEOPLE_HAND_LEFT_CALL]
+            elif tracked_people.handPosture[1] == self.PEOPLE_HAND_LEFT_POINTING:
+                mesh_file = self.meshMap[self.PEOPLE_HAND_LEFT_POINTING]
+            if tracked_people.handPosture[0] == self.PEOPLE_HAND_CALL:
+                mesh_file = self.meshMap[self.PEOPLE_HAND_RIGHT_CALL]
+            elif tracked_people.handPosture[0] == self.PEOPLE_HAND_RIGHT_POINTING:
+                mesh_file = self.meshMap[self.PEOPLE_HAND_RIGHT_POINTING]
+            elif tracked_people.handPosture[0] == self.PEOPLE_HAND_CROSSED:
+                mesh_file = self.meshMap[self.PEOPLE_HAND_CROSSED]
+
+        elif tracked_people.posture == self.PEOPLE_SITTING:
+            mesh_file = self.meshMap[self.PEOPLE_SITTING]
+            if tracked_people.handPosture[1] == self.PEOPLE_HAND_CALL:
+                mesh_file = self.meshMap[self.MESH_SITTING_HAND_LEFT_CALL]
+            elif tracked_people.handPosture[1] == self.PEOPLE_HAND_LEFT_POINTING:
+                mesh_file = self.meshMap[self.MESH_SITTING_HAND_LEFT_POINTING]
+            if tracked_people.handPosture[0] == self.PEOPLE_HAND_CALL:
+                mesh_file = self.meshMap[self.MESH_SITTING_HAND_RIGHT_CALL]
+            elif tracked_people.handPosture[0] == self.PEOPLE_HAND_RIGHT_POINTING:
+                mesh_file = self.meshMap[self.MESH_SITTING_HAND_RIGHT_POINTING]
+            if tracked_people.handPosture[0] == self.MESH_HAND_CROSS:
+                mesh_file = self.meshMap[self.MESH_HAND_CROSS]
+        elif tracked_people.posture == self.PEOPLE_LYING:
+            mesh_file = self.meshMap[self.PEOPLE_SITTING]
+
+
+        marker=Marker()
+        marker.header.frame_id=frame_id
+        # marker.header.stamp=rospy.get_time()
+        marker.ns = "tracker-people"
+        # marker.id = tracked_people.id
+        # marker id must be integer
+        marker.id = marker_id
+        marker.type = Marker.MESH_RESOURCE
+        marker.action = Marker.ADD
+        marker.lifetime = rospy.Duration.from_sec(5)
+        marker.pose=tracked_people.pose
+        marker.scale.x = 0.25
+        marker.scale.y = 0.25
+        marker.scale.z = 0.25
+        marker.color.a = 1.0
+        rgb = tracked_people.colorRGBMap[PersonMetaInfo.SHIRT_RECT]
+        if len(rgb) >= 3:
+            marker.color.r = round(rgb[0]/float(255),3)
+            marker.color.g = round(rgb[1]/float(255),3)
+            marker.color.b = round(rgb[2]/float(255),3)
+        marker.mesh_resource = str(mesh_file)
+        #rospy.logwarn("mesh file :"+str(mesh_file))
+        return marker
+
 
     def createRec(self, img,points,(B,G,R),size):
         if len(points)>=2:
@@ -249,7 +388,7 @@ class DisplayMetaData:
         if len(points)>=2:
             y_offset=10
             space_row=2
-            cv2.rectangle(img, (int(round(points[0].x)), int(round(points[0].y))-y_offset*3-5), (int(round(points[0].x))+100, int(round(points[0].y))), (0,0,0),  cv2.FILLED)
+            cv2.rectangle(img, (int(round(points[0].x)), int(round(points[0].y))-y_offset*4-5), (int(round(points[0].x))+100, int(round(points[0].y))), (0,0,0),  cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
             cv2.putText(img, "ID: "+tracked_people.id,(int(round(points[0].x)), int(round(points[0].y))), font, 0.4, (255, 255, 255), 1)
             #delta_y=delta_y+10
@@ -258,6 +397,12 @@ class DisplayMetaData:
             #      label=people.label_id[0:10]
             cv2.putText(img, "WEIGHT: "+str(tracked_people.weight),(int(round(points[0].x)), int(round(points[0].y))-y_offset-space_row), font, 0.4, (255, 255, 255), 1)
             cv2.putText(img, "TTL: "+str(round(tracked_people.ttl,1)),(int(round(points[0].x)), int(round(points[0].y))-y_offset*2-5), font, 0.4, (255, 255, 255), 1)
+
+            label = tracked_people.label_id
+            if len(label) > 10:
+                label = label[0:10]
+
+            cv2.putText(img, "LABEL: " + label , (int(round(points[0].x)), int(round(points[0].y)) - y_offset * 3 - 6), font, 0.4, (255, 255, 255), 1)
             delta_y = int(round(points[0].y))
             y_offset=10
             cv2.rectangle(img, (int(round(points[1].x)+2), delta_y), (int(round(points[1].x))+80, delta_y+12*5), (0,0,0),  cv2.FILLED)
@@ -298,4 +443,4 @@ class DisplayMetaData:
             cv2.rectangle(img, (int(round(points[1].x)+2), self.delta_y), (int(round(points[1].x))+40, self.delta_y+20), (0,0,0),  cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
             cv2.putText(img, str(round(people.distanceEval,2))+"m",(int(round(points[1].x)+2), self.delta_y+12), font, 0.4, (255, 255, 255), 1)
-            
+

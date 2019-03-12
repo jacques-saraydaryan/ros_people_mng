@@ -61,7 +61,7 @@ class PeopleMngNode():
         self.current_img=data
         image_to_process= self.current_img
         start_time=time.time()
-        rospy.logwarn("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
+        rospy.logdebug("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
         try:
             peopleMetaInfoList=PeopleMetaInfoList()
             people_list=[]
@@ -74,7 +74,7 @@ class PeopleMngNode():
             peopleMetaInfoList.peopleList=people_list
             peopleMetaInfoList.img=image_to_process
             #publish metaData
-            rospy.logwarn( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
+            rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
             self.pub_people_meta_info.publish(peopleMetaInfoList)
 
             #compute display
@@ -161,10 +161,7 @@ class PeopleMngNode():
         current_people_details.trouserRect.points=people.getBoundingBox(PersonMetaInfo.TROUSER_RECT)
         current_people_details.trouserColorList=people.getColorList(PersonMetaInfo.TROUSER_RECT)
         current_people.details=current_people_details
-        pt = Point32()
-        pt.x = people.position_x
-        pt.y = people.position_y
-        current_people.point2Map=pt
+        current_people.pose=people.pose
         return current_people
 
 

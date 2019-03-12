@@ -7,6 +7,7 @@ from sensor_msgs.msg import Image
 from ros_people_mng_msgs.msg import PeopleMetaInfoDetails,PeopleMetaInfo,PeopleMetaInfoList
 from process.PeopleMetaTrackerMng import PeopleMetaTrackerMng
 from process.DisplayMetaData import DisplayMetaData
+from visualization_msgs.msg import MarkerArray
 
 
 class PeopleMngNode:
@@ -14,6 +15,8 @@ class PeopleMngNode:
     def __init__(self):
         rospy.init_node('people_mng_tracker', anonymous=False)
         data_folder = rospy.get_param('imgtest_folder', '../data')
+        self.camera_frame_id = rospy.get_param('camera_frame_id', 'camera_frame')
+
 
 
         self._bridge = CvBridge()
@@ -24,6 +27,7 @@ class PeopleMngNode:
         self.sub_rgb = rospy.Subscriber("/people_meta_info", PeopleMetaInfoList, self.detect_people_meta_callback, queue_size=1)
         self.pub_people_meta_info = rospy.Publisher("/tracked_people_meta_info", PeopleMetaInfoList, queue_size=1)
         self.pub_people_meta_info_img = rospy.Publisher("/tracked_people_meta_info_img", Image, queue_size=1)
+        self.pub_tracked_people_marker = rospy.Publisher("/tracked_people_meta_info_marker", MarkerArray, queue_size=1)
         rospy.spin()
         rospy.loginfo("Exiting tracker...")
         self.tracker.stop_forgetting_function()
@@ -32,6 +36,9 @@ class PeopleMngNode:
     def detect_people_meta_callback(self,req):
         #rospy.loginfo("--------------------> Get data into tracker")
         tracked_people_list=self.tracker.track_people(req.peopleList)
+
+        marker_array=self.display.displayTracker3DMarker(tracked_people_list, self.camera_frame_id)
+        self.pub_tracked_people_marker.publish(marker_array)
 
         #req.img --> image to display meta info
         cv_image = self._bridge.imgmsg_to_cv2(req.img, desired_encoding="bgr8")

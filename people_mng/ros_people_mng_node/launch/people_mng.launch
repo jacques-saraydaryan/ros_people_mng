@@ -2,7 +2,11 @@
 
   <arg name="camera_topic" value="/pepper_robot/camera/front/image_raw"/>
   <!-- <arg name="camera_topic" value="/usb_cam/image_raw"/>  -->
-  <arg name="camera_topic_manager" value="/usb_cam/image_raw"/> -->
+  <!-- <arg name="camera_topic_manager" value="/usb_cam/image_raw"/> -->
+    <arg name="camera_topic_manager" value="/pepper_robot/naoqi_driver/camera/front/image_raw"/>
+
+
+
   <arg name="result_image_topic" value="/openpose/image_raw"/>
 
   <arg name="resolution" value="480x320"/>

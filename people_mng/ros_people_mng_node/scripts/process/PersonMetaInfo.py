@@ -15,8 +15,7 @@ class PersonMetaInfo():
     distanceEval=0
     label_id=''
     label_score=0.0
-    position_x = 0.0
-    position_y = 0.0
+    pose=""
 
     def __init__(self,id):
         self.id=id
@@ -31,9 +30,8 @@ class PersonMetaInfo():
         except Exception as e:
             rospy.logwarn("Unable to add bounding box:"+str(e))
 
-    def setPosition(self,x,y):
-        self.position_x = x
-        self.position_y = y
+    def setPosition(self,pose):
+        self.pose = pose
 
     def getBoundingBox(self,nameKey):
         value=[]

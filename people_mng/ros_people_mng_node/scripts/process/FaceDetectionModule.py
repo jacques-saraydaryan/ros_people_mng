@@ -33,8 +33,8 @@ class FaceDetectionModule():
         try:
             resp1=self._faceLearnSrv(label,img)
             resp2 = self._getImgFromIdSrv(label)
-            rospy.loginfo("Img of learnt label:"+str(label))
-            rospy.loginfo( "IMG:"+str(resp2))
+            rospy.logdebug("Img of learnt label:"+str(label))
+            rospy.logdebug( "IMG:"+str(resp2))
             return resp2
         except rospy.ServiceException, e:
              rospy.logwarn("Service call failed: %s"+str(e))
@@ -44,8 +44,8 @@ class FaceDetectionModule():
         try:
             resp1=self._detectFromImgSrv(img,isImgFace)
             if len(resp1.entityList.entity2DList) >0:
-                rospy.loginfo("Detect Name:"+str(resp1.entityList.entity2DList[0].label))
-                rospy.loginfo(resp1.entityList.entity2DList[0])
+                rospy.logdebug("Detect Name:"+str(resp1.entityList.entity2DList[0].label))
+                rospy.logdebug(resp1.entityList.entity2DList[0])
                 score=resp1.entityList.entity2DList[0].score
                 #score=0
                 return resp1.entityList.entity2DList[0].label,score

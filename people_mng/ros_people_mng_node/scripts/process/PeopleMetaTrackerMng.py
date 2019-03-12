@@ -13,7 +13,7 @@ import threading
 
 
 class PeopleMetaTrackerMng:
-    SCORE_THRESHOLD = 0.2
+    SCORE_THRESHOLD = 0.3
     FORGETTING_PERIOD = 1
     isForgettingThreadEnd = False
 
@@ -26,6 +26,7 @@ class PeopleMetaTrackerMng:
         self.configure()
 
         self.forgetting_thread.start()
+        rospy.loginfo("TRACKER---- READY TO TRACK")
 
     def configure(self):
         self.forget_param_map[TrackedPersonMetaInfo.ROLE_NONE]=(10,30)
@@ -33,10 +34,12 @@ class PeopleMetaTrackerMng:
         self.forget_param_map[TrackedPersonMetaInfo.ROLE_PERSON_OF_INTEREST] = (10, 30)
 
     def track_people(self, peopleList):
-        max_score = [0,0,0,0,0]
-        max_id = ""
+
         for people in peopleList:
-            (x, y, z) = self.get_people_pose(people.point2Map.x,people.point2Map.y,0)
+            new_pose = self.get_people_pose(people.pose)
+
+            max_score = [0, 0, 0, 0, 0]
+            max_id = ""
 
             ## protected section on tracked people map
             self.tracked_people_map_lock.acquire()
@@ -46,17 +49,16 @@ class PeopleMetaTrackerMng:
                         (
                             people,
                             self.trackedPeopleMap[tracked_people_key],
-                            x, y, z
+                            new_pose
                         )
-                rospy.loginfo("---- CURRENT TOTAL SCORE:" + str(score) + ", People_label:" + people.label_id+", TRACKED PEOPLE ID:" + str(tracked_people_key))
+                rospy.logdebug("---- CURRENT TOTAL SCORE:" + str(score) + ", People_label:" + people.label_id+", TRACKED PEOPLE ID:" + str(tracked_people_key))
                 if score[0] > max_score[0]:
                     max_score = score
                     max_id = tracked_people_key
             self.tracked_people_map_lock.release()
             ## End of protected section
 
-            rospy.loginfo("MAX SCORE:" + str(
-                max_score) + ", People_label:" + people.label_id + ", TRACKED PEOPLE ID:" + str(max_id))
+            rospy.logdebug("MAX SCORE:" + str( max_score) + ", People_label:" + people.label_id + ", TRACKED PEOPLE ID:" + str(max_id))
             if max_score[0] < self.SCORE_THRESHOLD:
 
 
@@ -69,15 +71,17 @@ class PeopleMetaTrackerMng:
                     people.details.trouserRect, people.details.shirtColorList,
                     people.details.trouserColorList
                 )
-                new_tracked_people.setMainColor(PersonMetaInfo.SHIRT_RECT, people.shirt_color_name, (0, 0, 0))
-                new_tracked_people.setMainColor(PersonMetaInfo.TROUSER_RECT, people.trouser_color_name, (0, 0, 0))
-                new_tracked_people.setPose(x, y, z)
-                rospy.loginfo("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                new_tracked_people.setMainColor(PersonMetaInfo.SHIRT_RECT, people.shirt_color_name, self.getMaxColor(people.details.shirtColorList))
+                new_tracked_people.setMainColor(PersonMetaInfo.TROUSER_RECT, people.trouser_color_name, self.getMaxColor(people.details.trouserColorList))
+                new_tracked_people.setPose(new_pose)
+                new_tracked_people.posture=people.posture
+                new_tracked_people.handPosture = people.handPosture
+                rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
                 self.addTrackedPeople(new_tracked_people)
 
             else:
-                rospy.loginfo("UPDATE EXISTING TRACKED PEOPLE:" + str(max_id))
-                self.updateTrackedPeople(max_id,people,x,y,z,max_score)
+                rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_id))
+                self.updateTrackedPeople(max_id,people,new_pose,max_score)
         return self.getTrackedPeopleList()
 
     def addTrackedPeople(self, new_tracked_people):
@@ -85,9 +89,11 @@ class PeopleMetaTrackerMng:
         self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
         self.tracked_people_map_lock.release()
 
-    def updateTrackedPeople(self, id , people, x, y, z , score):
+    def updateTrackedPeople(self, id , people, new_pose, score):
         self.tracked_people_map_lock.acquire()
-        self.trackedPeopleMap[id].setPose(x, y, z)
+        if self.trackedPeopleMap[id].label_id == 'None':
+            self.trackedPeopleMap[id].label_id = people.label_id
+        self.trackedPeopleMap[id].setPose(new_pose)
         self.trackedPeopleMap[id].incWeight()
         self.trackedPeopleMap[id].setBoundingBox(PersonMetaInfo.PERSON_RECT,people.details.boundingBox)
         self.trackedPeopleMap[id].last_score=score[0]
@@ -95,6 +101,12 @@ class PeopleMetaTrackerMng:
         self.trackedPeopleMap[id].last_score_c_s=score[2]
         self.trackedPeopleMap[id].last_score_c_t=score[3]
         self.trackedPeopleMap[id].last_score_pose=score[4]
+        self.trackedPeopleMap[id].posture=people.posture
+        self.trackedPeopleMap[id].handPosture = people.handPosture
+
+        # update additional information relative to tracked people
+        self.peopleSimilarity.update_tracked_people(people,self.trackedPeopleMap[id])
+
         self.tracked_people_map_lock.release()
 
     def getTrackedPeopleList(self):
@@ -114,15 +126,9 @@ class PeopleMetaTrackerMng:
     #     del self.trackedPeopleMap[id]
     #     self.tracked_people_map_lock.release()
 
-    def get_people_pose(self, x,y,z):
-        # get center of the bounding box
-        r_x = x
-        r_y = y
-        r_z = z
-
-        # TODO compute the transformation from camera frame to targeted frame (map)
-
-        return r_x, r_y, r_z
+    def get_people_pose(self, pose):
+        # TODO Make tf transform from curren people camera pose and map people map pose
+        return pose
 
     def stop_forgetting_function(self):
         self.isForgettingThreadEnd=True
@@ -142,7 +148,7 @@ class PeopleMetaTrackerMng:
                     (weigth_threshold,time_threshold) = self.forget_param_map[current_tracked_people.role]
                     # compute forget function
                     forget_result=  self.forget_function(elapsed_time,current_tracked_people.weight,weigth_threshold,time_threshold)
-                    self.trackedPeopleMap[tracked_people_key].ttl=forget_result
+                    self.trackedPeopleMap[tracked_people_key].ttl = forget_result
                     if forget_result <= 0:
                         # remove current tracked people
                         id_to_remove.append(tracked_people_key)
@@ -152,6 +158,9 @@ class PeopleMetaTrackerMng:
                         del self.trackedPeopleMap[str(id)]
                     except KeyError as e:
                         rospy.logwarn("unable to del tracked people e:"+str(e))
+
+                # ask for update of process score function
+                self.peopleSimilarity.update_process_score(id_to_remove)
 
                 self.tracked_people_map_lock.release()
 
@@ -166,3 +175,11 @@ class PeopleMetaTrackerMng:
 
 
 
+    def getMaxColor(self,colorList):
+        rgb=[]
+        max=0.0
+        for color in colorList:
+            if color.percentage_of_img > max:
+                max=color.percentage_of_img
+                rgb=color.rgb
+        return rgb
