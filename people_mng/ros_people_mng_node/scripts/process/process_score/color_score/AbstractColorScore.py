@@ -17,7 +17,7 @@ class AbstractColorScore:
         :param colorList: color list to compute
         :return: normaliszed HSV
         """
-        hsv = []
+        hsv = [0,0,0]
         hsv_result = []
         max_value = 0.0
         for color in colorList:
