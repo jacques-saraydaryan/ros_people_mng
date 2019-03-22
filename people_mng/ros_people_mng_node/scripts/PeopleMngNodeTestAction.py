@@ -27,12 +27,13 @@ def LoadImgAndUseAction():
     #img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/imgMulti4.png')
     #img_loaded1 = cv2.imread(test_folder+'/large-people.jpg')
-    img_loaded1 = cv2.imread(test_folder+'/large-people2.jpg')
+    #img_loaded1 = cv2.imread(test_folder+'/large-people2.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/multiple_isolate2.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/multiple_isolated1.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/multiple_isolated3.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper5.png')
     #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper4.png')
+    img_loaded1 = cv2.imread(test_folder + '/bbt4-s.jpg')
 
     
 

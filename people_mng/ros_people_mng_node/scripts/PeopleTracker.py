@@ -35,7 +35,9 @@ class PeopleMngNode:
 
     def detect_people_meta_callback(self,req):
         #rospy.loginfo("--------------------> Get data into tracker")
-        tracked_people_list=self.tracker.track_people(req.peopleList)
+        #tracked_people_list=self.tracker.track_people(req.peopleList)
+        tracked_people_list = self.tracker.track_people_best_per_tracked(req.peopleList)
+
 
         marker_array=self.display.displayTracker3DMarker(tracked_people_list, self.camera_frame_id)
         self.pub_tracked_people_marker.publish(marker_array)

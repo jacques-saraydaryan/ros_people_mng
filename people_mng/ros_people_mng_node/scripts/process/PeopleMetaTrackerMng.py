@@ -13,7 +13,7 @@ import threading
 
 
 class PeopleMetaTrackerMng:
-    SCORE_THRESHOLD = 0.3
+    SCORE_THRESHOLD = 0.2 #0.3
     FORGETTING_PERIOD = 1
     isForgettingThreadEnd = False
 
@@ -81,16 +81,141 @@ class PeopleMetaTrackerMng:
 
             else:
                 rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_id))
-                self.updateTrackedPeople(max_id,people,new_pose,max_score)
+                self.updateTrackedPeople(max_id,people,new_pose,max_score,True)
         return self.getTrackedPeopleList()
+
+    def track_people_best_per_tracked(self, peopleList):
+        score_per_tracked_map={}
+        ## protected section on tracked people map
+        self.tracked_people_map_lock.acquire()
+        for tracked_people_key in self.trackedPeopleMap:
+            score_per_tracked_map[tracked_people_key]=[]
+
+        max_score_per_people={}
+        new_pose_per_people = {}
+        #compute 1 score per people per tracked people
+        for people in peopleList:
+            new_pose = self.get_people_pose(people.pose)
+            new_pose_per_people[people.id]=new_pose
+            max_score = [0, 0, 0, 0, 0]
+
+            for tracked_people_key in self.trackedPeopleMap:
+                score = self.peopleSimilarity.evaluate_people \
+                        (
+                        people,
+                        self.trackedPeopleMap[tracked_people_key],
+                        new_pose
+                    )
+                rospy.logdebug("---- CURRENT TOTAL SCORE:" + str(
+                    score) + ", People_label:" + people.label_id + ", TRACKED PEOPLE ID:" + str(tracked_people_key))
+
+                if score[0] > max_score[0]:
+                    max_score = score
+
+                score_per_tracked_map[tracked_people_key].append((people,score))
+            max_score_per_people[people.id]=max_score
+
+
+        # create new cluster if needed
+        affected_people_id_list = []
+
+        for people in peopleList:
+            if max_score_per_people[people.id][0] < self.SCORE_THRESHOLD:
+                affected_people_id_list.append(people.id)
+
+                # According to the score update existing trackedPeople or create a new one
+                new_tracked_people = TrackedPersonMetaInfo(
+                    str(uuid.uuid1()),
+                    people.label_id,
+                    people.label_score,
+                    people.details.boundingBox, people.details.shirtRect,
+                    people.details.trouserRect, people.details.shirtColorList,
+                    people.details.trouserColorList
+                )
+                new_tracked_people.setMainColor(PersonMetaInfo.SHIRT_RECT, people.shirt_color_name,
+                                                self.getMaxColor(people.details.shirtColorList))
+                new_tracked_people.setMainColor(PersonMetaInfo.TROUSER_RECT, people.trouser_color_name,
+                                                self.getMaxColor(people.details.trouserColorList))
+                new_tracked_people.setPose(new_pose_per_people[people.id])
+                new_tracked_people.posture = people.posture
+                new_tracked_people.handPosture = people.handPosture
+                rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
+                score_per_tracked_map[new_tracked_people.id]=[]
+
+        # affect best score to tracked people need to order per max score
+        # ordered = sorted(score_per_tracked_map.items(), key=lambda attributes: attributes[1][1])
+        # =sorted(, key=lambda t: t[1][1])
+        # print(ordered)
+        order_tracked_key_list=self.order_track_per_score(score_per_tracked_map)
+        for tracked_people_key in order_tracked_key_list:
+            max_score=[0, 0, 0, 0, 0]
+            max_people=0
+            for p,s in score_per_tracked_map[tracked_people_key]:
+                if(s[0]>max_score[0] and  p.id not in affected_people_id_list):
+                    max_score=s
+                    max_people=p
+            #check if the selected people has a score below threshold or not
+            if max_score[0] > self.SCORE_THRESHOLD:
+                #check if people not already affected
+                if max_people.id not in affected_people_id_list:
+                    affected_people_id_list.append(max_people.id)
+                    rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_people.id))
+                    self.updateTrackedPeople(tracked_people_key, max_people, new_pose_per_people[max_people.id], max_score,False)
+        # for all people not affected create a new tracked people
+        for people in peopleList:
+            if people.id not in affected_people_id_list:
+                # According to the score update existing trackedPeople or create a new one
+                new_tracked_people = TrackedPersonMetaInfo(
+                    str(uuid.uuid1()),
+                    people.label_id,
+                    people.label_score,
+                    people.details.boundingBox, people.details.shirtRect,
+                    people.details.trouserRect, people.details.shirtColorList,
+                    people.details.trouserColorList
+                )
+                new_tracked_people.setMainColor(PersonMetaInfo.SHIRT_RECT, people.shirt_color_name,
+                                                self.getMaxColor(people.details.shirtColorList))
+                new_tracked_people.setMainColor(PersonMetaInfo.TROUSER_RECT, people.trouser_color_name,
+                                                self.getMaxColor(people.details.trouserColorList))
+                new_tracked_people.setPose(new_pose_per_people[people.id])
+                new_tracked_people.posture = people.posture
+                new_tracked_people.handPosture = people.handPosture
+                rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
+
+        self.tracked_people_map_lock.release()
+        return self.getTrackedPeopleList()
+
+
+
+    def order_track_per_score(self,score_per_tracked_map):
+        tracked_max_score_map={}
+        for tracked_key in score_per_tracked_map:
+            max_score=0
+            for p,s in score_per_tracked_map[tracked_key]:
+                if s[0]> max_score:
+                    max_score=s[0]
+            tracked_max_score_map[tracked_key]=max_score
+
+        return sorted(tracked_max_score_map, key=lambda t: t[1], reverse=True)
+
+
+
+
+
+
+
+
 
     def addTrackedPeople(self, new_tracked_people):
         self.tracked_people_map_lock.acquire()
         self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
         self.tracked_people_map_lock.release()
 
-    def updateTrackedPeople(self, id , people, new_pose, score):
-        self.tracked_people_map_lock.acquire()
+    def updateTrackedPeople(self, id , people, new_pose, score, isLock):
+        if isLock:
+            self.tracked_people_map_lock.acquire()
         if self.trackedPeopleMap[id].label_id == 'None':
             self.trackedPeopleMap[id].label_id = people.label_id
         self.trackedPeopleMap[id].setPose(new_pose)
@@ -106,8 +231,8 @@ class PeopleMetaTrackerMng:
 
         # update additional information relative to tracked people
         self.peopleSimilarity.update_tracked_people(people,self.trackedPeopleMap[id])
-
-        self.tracked_people_map_lock.release()
+        if isLock:
+            self.tracked_people_map_lock.release()
 
     def getTrackedPeopleList(self):
         self.tracked_people_map_lock.acquire()
