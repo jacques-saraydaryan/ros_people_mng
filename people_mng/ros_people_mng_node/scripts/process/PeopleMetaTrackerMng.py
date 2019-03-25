@@ -7,6 +7,7 @@ import time
 import math
 import rospy
 from PeopleMetaSimilarity import PeopleMetaSimilarity
+from tools.StatMng import StatMng
 from TrackedPersonMetaInfo import TrackedPersonMetaInfo
 from PersonMetaInfo import PersonMetaInfo
 import threading
@@ -16,11 +17,15 @@ class PeopleMetaTrackerMng:
     SCORE_THRESHOLD = 0.2 #0.3
     FORGETTING_PERIOD = 1
     isForgettingThreadEnd = False
+    ACTION_CREATE = "CREATE"
+    ACTION_UPDATE = "UPDATE"
+    ACTION_DELETE = "DELETE"
 
-    def __init__(self):
+    def __init__(self, stat_folder):
         self.trackedPeopleMap = {}
         self.forget_param_map = {}
         self.peopleSimilarity = PeopleMetaSimilarity()
+        self.statMng = StatMng(stat_folder)
         self.tracked_people_map_lock = threading.Lock()
         self.forgetting_thread = threading.Thread(target=self.forgetting_callback, args=(self.FORGETTING_PERIOD,))
         self.configure()
@@ -77,11 +82,13 @@ class PeopleMetaTrackerMng:
                 new_tracked_people.posture=people.posture
                 new_tracked_people.handPosture = people.handPosture
                 rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                self.statMng.update_stat(self.ACTION_CREATE, new_tracked_people.id, 0, 0, 0, 0, 0)
                 self.addTrackedPeople(new_tracked_people)
 
             else:
                 rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_id))
-                self.updateTrackedPeople(max_id,people,new_pose,max_score,True)
+                self.statMng.update_stat(self.ACTION_CREATE, max_id, max_score[0], max_score[1], max_score[2], max_score[3], max_score[4])
+                self.updateTrackedPeople(max_id, people, new_pose, max_score, True)
         return self.getTrackedPeopleList()
 
     def track_people_best_per_tracked(self, peopleList):
@@ -140,6 +147,7 @@ class PeopleMetaTrackerMng:
                 new_tracked_people.posture = people.posture
                 new_tracked_people.handPosture = people.handPosture
                 rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                self.statMng.update_stat(self.ACTION_CREATE, new_tracked_people.id, 0, 0, 0, 0, 0)
                 self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
                 score_per_tracked_map[new_tracked_people.id]=[]
 
@@ -161,6 +169,7 @@ class PeopleMetaTrackerMng:
                 if max_people.id not in affected_people_id_list:
                     affected_people_id_list.append(max_people.id)
                     rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_people.id))
+                    self.statMng.update_stat(self.ACTION_UPDATE, tracked_people_key, max_score[0], max_score[1], max_score[2], max_score[3], max_score[4])
                     self.updateTrackedPeople(tracked_people_key, max_people, new_pose_per_people[max_people.id], max_score,False)
         # for all people not affected create a new tracked people
         for people in peopleList:
@@ -182,6 +191,7 @@ class PeopleMetaTrackerMng:
                 new_tracked_people.posture = people.posture
                 new_tracked_people.handPosture = people.handPosture
                 rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
+                self.statMng.update_stat(self.ACTION_CREATE, new_tracked_people.id, 0, 0, 0, 0, 0)
                 self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
 
         self.tracked_people_map_lock.release()
@@ -199,11 +209,6 @@ class PeopleMetaTrackerMng:
             tracked_max_score_map[tracked_key]=max_score
 
         return sorted(tracked_max_score_map, key=lambda t: t[1], reverse=True)
-
-
-
-
-
 
 
 
@@ -280,6 +285,7 @@ class PeopleMetaTrackerMng:
 
                 for id in id_to_remove:
                     try:
+                        self.statMng.update_stat(self.ACTION_DELETE, str(id), 0, 0, 0, 0, 0)
                         del self.trackedPeopleMap[str(id)]
                     except KeyError as e:
                         rospy.logwarn("unable to del tracked people e:"+str(e))

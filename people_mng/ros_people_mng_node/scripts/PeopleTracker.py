@@ -16,11 +16,11 @@ class PeopleMngNode:
         rospy.init_node('people_mng_tracker', anonymous=False)
         data_folder = rospy.get_param('imgtest_folder', '../data')
         self.camera_frame_id = rospy.get_param('camera_frame_id', 'camera_frame')
-
+        stat_folder = rospy.get_param('stat_folder', '/tmp/')
 
 
         self._bridge = CvBridge()
-        self.tracker = PeopleMetaTrackerMng()
+        self.tracker = PeopleMetaTrackerMng(stat_folder)
         self.display=DisplayMetaData(data_folder+"/icon/",False,True,False)
 
         # Subscribe to the image 
@@ -30,6 +30,7 @@ class PeopleMngNode:
         self.pub_tracked_people_marker = rospy.Publisher("/tracked_people_meta_info_marker", MarkerArray, queue_size=1)
         rospy.spin()
         rospy.loginfo("Exiting tracker...")
+        self.tracker.statMng.save_stat()
         self.tracker.stop_forgetting_function()
 
 
