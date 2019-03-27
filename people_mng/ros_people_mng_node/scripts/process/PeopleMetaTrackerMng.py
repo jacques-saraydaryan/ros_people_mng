@@ -115,6 +115,8 @@ class PeopleMetaTrackerMng:
                     )
                 rospy.logdebug("---- CURRENT TOTAL SCORE:" + str(
                     score) + ", People_label:" + people.label_id + ", TRACKED PEOPLE ID:" + str(tracked_people_key))
+                self.statMng.update_stat_versus(people.id, tracked_people_key, score[0], score[1], score[2],
+                                                score[3], score[4])
 
                 if score[0] > max_score[0]:
                     max_score = score
@@ -147,7 +149,7 @@ class PeopleMetaTrackerMng:
                 new_tracked_people.posture = people.posture
                 new_tracked_people.handPosture = people.handPosture
                 rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
-                self.statMng.update_stat(self.ACTION_CREATE, new_tracked_people.id, 0, 0, 0, 0, 0)
+                self.statMng.update_stat(self.ACTION_CREATE,people.id, new_tracked_people.id, 0, 0, 0, 0, 0)
                 self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
                 score_per_tracked_map[new_tracked_people.id]=[]
 
@@ -169,7 +171,16 @@ class PeopleMetaTrackerMng:
                 if max_people.id not in affected_people_id_list:
                     affected_people_id_list.append(max_people.id)
                     rospy.logdebug("UPDATE EXISTING TRACKED PEOPLE:" + str(max_people.id))
-                    self.statMng.update_stat(self.ACTION_UPDATE, tracked_people_key, max_score[0], max_score[1], max_score[2], max_score[3], max_score[4])
+                    self.statMng.update_stat(self.ACTION_UPDATE,max_people.id, tracked_people_key, max_score[0], max_score[1], max_score[2], max_score[3], max_score[4])
+
+                    # # CAUTION
+                    # # # for all tracked only for stat
+                    # for t_tmp in score_per_tracked_map:
+                    #         for p_tmp,s_tmp in score_per_tracked_map[t_tmp]:
+                    #             if p_tmp.id == p.id :
+                    #                 self.statMng.update_stat_versus(tracked_people_key, t_tmp, s_tmp[0], s_tmp[1],
+                    #                                                 s_tmp[2], s_tmp[3], s_tmp[4])
+
                     self.updateTrackedPeople(tracked_people_key, max_people, new_pose_per_people[max_people.id], max_score,False)
         # for all people not affected create a new tracked people
         for people in peopleList:
@@ -191,7 +202,7 @@ class PeopleMetaTrackerMng:
                 new_tracked_people.posture = people.posture
                 new_tracked_people.handPosture = people.handPosture
                 rospy.logdebug("CREATE NEW TRACKED PEOPLE:" + str(new_tracked_people.id))
-                self.statMng.update_stat(self.ACTION_CREATE, new_tracked_people.id, 0, 0, 0, 0, 0)
+                self.statMng.update_stat(self.ACTION_CREATE,people.id, new_tracked_people.id, 0, 0, 0, 0, 0)
                 self.trackedPeopleMap[new_tracked_people.id] = new_tracked_people
 
         self.tracked_people_map_lock.release()
@@ -285,7 +296,7 @@ class PeopleMetaTrackerMng:
 
                 for id in id_to_remove:
                     try:
-                        self.statMng.update_stat(self.ACTION_DELETE, str(id), 0, 0, 0, 0, 0)
+                        self.statMng.update_stat(self.ACTION_DELETE,'NONE', str(id), 0, 0, 0, 0, 0)
                         del self.trackedPeopleMap[str(id)]
                     except KeyError as e:
                         rospy.logwarn("unable to del tracked people e:"+str(e))
