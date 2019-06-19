@@ -109,7 +109,7 @@ class DetectPeopleMeta():
 
     def getPeopleGossip(self, persons):
         """
-        Extract gossip from people detected by OpenPose
+        Extract gossip from persons detected by OpenPose
         Ouput : ros_openpose_gossip_msgs/PersonsGossip persons_gossip
         """
         rospy.logdebug("------- Process Data: GOSSIPPOSE -------")
@@ -224,17 +224,17 @@ class DetectPeopleMeta():
         """
         Premiere rencontre avec une personne - Extraction des meta infos - Enregistrement visage
         """
-        #Get people
+        #Get persons
         persons = self.getPeopleInImg(img)
-        #If no people here : stop
+        #If no persons here : stop
         if persons is None:
-            rospy.logwarn("Failed to detect people with OpenPose")
+            rospy.logwarn("Failed to detect person with OpenPose")
             return None
         #If more than one person here : stop
         if len(persons.persons) > 1:
             rospy.logwarn("More than 1 person detected. Unable to learn name.")
             return None
-        #We have people - Time to get their gossip
+        #We have persons - Time to get their gossip
         persons.image_w = img.width
         persons.image_h = img.height
         persons_gossip = self.getPeopleGossip(persons)
@@ -266,13 +266,13 @@ class DetectPeopleMeta():
         """
         Reconnaissance de personnes deja rencontrées précédemment
         """
-        #Get people
+        #Get persons
         persons = self.getPeopleInImg(img)
-        #If no people here : stop
+        #If no persons here : stop
         if persons is None:
-            rospy.logwarn("Failed to detect people with OpenPose")
+            rospy.logwarn("Failed to detect persons with OpenPose")
             return None
-        #We have people - Time to get their gossip
+        #We have persons - Time to get their gossip
         persons.image_w = img.width
         persons.image_h = img.height
         persons_gossip = self.getPeopleGossip(persons)
@@ -302,141 +302,6 @@ class DetectPeopleMeta():
             #Copy the meta information in the global map
             personMetaInfoMap[person_meta.id]=copy.deepcopy(person_meta)
         #Output
-        return personMetaInfoMap
-
-    def processImg(self, img):
-        start_time = time.time()
-        personMetaInfoMap = {}
-        ################################
-        ####  PROCESS OVERALL IMG   ####
-        ################################
-        rospy.logdebug("---------------------------------------------------:NEW PROCESS-----:" + str(
-            round(time.time() - start_time, 3)) + "s")
-        start_time = time.time()
-        rospy.logdebug("------- Process Data: OPENPOSE -------")
-        persons = self.callOpenpose(img)
-        persons.image_w = img.width
-        persons.image_h = img.height
-        #rospy.loginfo(persons)
-        if persons == None:
-             return
-        #rospy.loginfo(persons)
-        rospy.logdebug("---------------------------------------------------:OPENPOSE: timeElasped since last operation:" + str(
-            round(time.time() - start_time, 3)) + "s")
-        start_time = time.time()
-        rospy.logdebug("------- Process Data: GOSSIP POSE -------")
-        gossip_pose = self.callGossipPose(persons)
-        if gossip_pose == None:
-            return
-        #rospy.loginfo(gossip_pose)
-        for person in gossip_pose.personsGossip.personsGossip:
-            ################################
-            ####   PROCESS ONE PERSON   ####
-            ################################
-            current_person = PersonMetaInfo(person.id)
-            current_person.posture = person.posture
-            current_person.handPosture = person.handPosture
-            current_person.distanceEval = person.distanceEval
-            current_person.setBoundingBox(PersonMetaInfo.PERSON_RECT, person.boundingBox.points)
-            current_person.setPosition(person.pose)
-            ### FIXME TO REMOVE ONLY FOR TEST
-            #x0,y0=self.getRandomPt(img.height,img.width)
-            #x1=x0+30
-            #y1=y0+40
-            #pt1=Point32()
-            #pt1.x=x0
-            #pt1.y=y0
-            #pt2=Point32()
-            #pt2.x=x1
-            #pt2.y=y1
-            #person.shirtRect.points.append(pt1)
-            #person.shirtRect.points.append(pt2)
-            ### END FIXME TO REMOVE ONLY FOR TEST
-            # convert image msg to cv img for crop purpose
-            cv_image = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
-            rospy.logdebug("---------------------------------------------------: GOSSIP: timeElasped since last operation:" + str(
-                round(time.time() - start_time, 3)) + "s")
-            start_time = time.time()
-            rospy.logdebug("------- Process Data: Main Color Detection -------")
-            rospy.logdebug("COLOR DETECTION: PERSON:")
-            rospy.logdebug(person)
-            if len(person.shirtRect.points) == 2 :
-                current_person.setBoundingBox(PersonMetaInfo.SHIRT_RECT,person.shirtRect.points)
-                #Get main color
-                ## crop image with given point the startY and endY coordinates, followed by the startX and endX
-                #imCrop = im[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
-                #cv_image = bridge.imgmsg_to_cv2(img, desired_encoding="passthrough")
-                imCrop = cv_image[int(person.shirtRect.points[0].y):int(person.shirtRect.points[1].y), int(person.shirtRect.points[0].x):int(person.shirtRect.points[1].x)]
-                #rospy.loginfo(imCrop)
-                if imCrop.size !=0:
-                    #convert cv image to image msg to send to service
-                    imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8")
-                    dominant_color1=self.callColorDetection(imCrop_msg)
-                    #current_person.colorNameMap[PersonMetaInfo.SHIRT_RECT]=dominant_color1.main_color.color_name
-                    #current_person.colorRGBMap[PersonMetaInfo.SHIRT_RECT]=dominant_color1.main_color.rgb
-                    current_person.setMainColor(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_color.color_name,dominant_color1.main_color.rgb)
-                    current_person.setColorList(PersonMetaInfo.SHIRT_RECT,dominant_color1.main_colors.colorList)
-                    rospy.logdebug("id:"+str(current_person.id)+"-shirtRect-color:"+str(dominant_color1.main_color.color_name))
-                else:
-                    rospy.logwarn("Crop Img =[]")
-            if len(person.trouserRect.points) ==2 :
-                current_person.setBoundingBox(PersonMetaInfo.TROUSER_RECT,person.trouserRect.points)
-                #Get main color
-                ## crop image with given point the startY and endY coordinates, followed by the startX and endX
-                #imCrop = im[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
-                imCrop = cv_image[int(person.trouserRect.points[0].y):int(person.trouserRect.points[1].y), int(person.trouserRect.points[0].x):int(person.trouserRect.points[1].x)]
-                #convert cv image to image msg to send to service
-                #rospy.loginfo("PT1")
-                #rospy.loginfo(person.trouserRect.points[0])
-                #rospy.loginfo("PT2")
-                #rospy.loginfo(person.trouserRect.points[1])
-                #rospy.loginfo(imCrop)
-                if imCrop.size !=0:
-                    imCrop_msg = self._bridge.cv2_to_imgmsg(imCrop, encoding="bgr8")
-                    rospy.logdebug("-----------        trouserRect               ----------------")
-                    dominant_color2=self.callColorDetection(imCrop_msg)
-                    #current_person.colorNameMap[PersonMetaInfo.TROUSER_RECT]=dominant_color2.main_color.color_name
-                    #current_person.colorRGBMap[PersonMetaInfo.TROUSER_RECT]=dominant_color2.main_color.rgb
-                    current_person.setMainColor(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_color.color_name,dominant_color2.main_color.rgb)
-                    current_person.setColorList(PersonMetaInfo.TROUSER_RECT,dominant_color2.main_colors.colorList)
-                    rospy.logdebug("id:"+str(current_person.id)+"-trouserRect-color:"+str(dominant_color2.main_color.color_name))
-                else:
-                    rospy.logwarn("Crop Img =[]")
-            #if len(person.people.points) ==2 :
-            #   imCrop = im[int(person.people.points[0].y):int(person.people.points[1].y), int(person.people.points[0].x):int(person.people.points[1].x)]
-            #   label self._faceProcess.detectFaceOnImg(imCrop)
-            #   if label != None:
-            #       current_person.label_id=label
-            rospy.logdebug("---------------------------------------------------: COLOR timeElasped since last operation:" + str(
-                round(time.time() - start_time, 3)) + "s")
-            start_time = time.time()
-            rospy.logdebug("------- Process Data: FACE DETECTION -------")
-            rospy.logdebug("FACE DETECTION: BOUNDING BOX:")
-            rospy.logdebug(person)
-            isImgFace = False
-            if self.is_face_bounding_box_used:
-                target_box = person.headRect.points
-                isImgFace = True
-            else:
-                target_box = person.boundingBox.points
-            if len(target_box) !=0:
-                imCropP = cv_image[int(target_box[0].y):int(target_box[1].y), int(target_box[0].x):int(target_box[1].x)]
-                #cv2.imshow('image',imCropP)
-                #cv2.waitKey(0)
-                msg_im = self._bridge.cv2_to_imgmsg(imCropP, encoding="bgr8")
-                label, score = self._faceProcess.detectFaceOnImg(msg_im, isImgFace)
-                current_person.label_id = str(label)
-                current_person.label_score = score
-            else:
-                rospy.logwarn("No head bounding box for person:"+str(person.id))
-                current_person.label_id = str('None')
-                current_person.label_score = 0.0
-            personMetaInfoMap[current_person.id]=copy.deepcopy(current_person)
-        rospy.logdebug("DETECTED PEOPLE ")
-        rospy.logdebug(personMetaInfoMap)
-        rospy.logdebug("---------------------------------------------------: FACE: timeElasped since last operation:" + str(
-            round(time.time() - start_time, 3)) + "s")
-        start_time = time.time()
         return personMetaInfoMap
 
     def getRandomPt(self,h,w):

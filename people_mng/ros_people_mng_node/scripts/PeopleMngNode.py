@@ -17,11 +17,15 @@ from ros_color_detection_srvs.srv import DetectColorFromImg
 from ros_people_mng_msgs.msg import PeopleMetaInfoDetails, PeopleMetaInfo, PeopleMetaInfoList
 from ros_people_mng_actions.msg import ProcessPeopleFromImgAction, ProcessPeopleFromImgResult
 from ros_people_mng_actions.msg import LearnPeopleFromImgAction, LearnPeopleFromImgResult
+from ros_people_mng_actions.msg import GetPeopleNameFromImgAction, GetPeopleNameFromImgResult
 from ros_people_mng_srvs.srv import ProcessPeopleFromImg
 
-from process.DetectPeopleMeta import DetectPeopleMeta,PersonMetaInfo
+from process.DetectPeopleMeta import DetectPeopleMeta
+from process.PersonMetaInfo import PersonMetaInfo
 from process.DisplayMetaData import DisplayMetaData
+from process.PeopleMetaSimilarity import PeopleMetaSimilarity
 from geometry_msgs.msg import Point32
+from geometry_msgs.msg import Pose
 
 class PeopleMngNode():
 
@@ -29,6 +33,12 @@ class PeopleMngNode():
         # Node configuration
         rospy.init_node('people_mng_node', anonymous=False)
         self.configure()
+        # Saved people Map
+        self.peopleMetaInfoMap = {}
+        # Similarities processing
+        self.peopleMetaSimilarity = PeopleMetaSimilarity()
+        self.peopleMetaSimilarity.CURRENT_POSE_SCORE = self.peopleMetaSimilarity.PROCESS_POSE_NONE_SCORE #No pose
+        self.peopleMetaSimilarity.WEIGHT_POSE_SCORE = 0
         # Subscribe to the image
         self.sub_rgb = rospy.Subscriber("/image", Image, self.rgb_callback, queue_size=1)
         self.pub_people_meta_info = rospy.Publisher("/people_meta_info", PeopleMetaInfoList, queue_size=1)
@@ -40,6 +50,8 @@ class PeopleMngNode():
         self.actionServer_detect_people.start()
         self.actionServer_learn_people = actionlib.SimpleActionServer('learn_people_meta_action', LearnPeopleFromImgAction, self.executePeopleMetaLearningActionServer, False)
         self.actionServer_learn_people.start()
+        self.actionServer_get_people_name = actionlib.SimpleActionServer('get_people_name_action', GetPeopleNameFromImgAction, self.executeGetPeopleNameActionServer, False)
+        self.actionServer_get_people_name.start()
         self.current_img = None
         # ROS loop
         rospy.spin()
@@ -61,18 +73,17 @@ class PeopleMngNode():
         try:
             peopleMetaInfoList=PeopleMetaInfoList()
             people_list=[]
-            result=self.detect_people_meta.processImg(image_to_process)
+            result=self.detect_people_meta.recognizePeople(image_to_process)
             for person in result.values():
                 rospy.logdebug('-')
                 rospy.logdebug(str(person))
-                current_peopleMeta=self.convertPeoplToRosMsg(person)
+                current_peopleMeta=self.convertPersonMetaInfoToRosMsg(person)
                 people_list.append(current_peopleMeta)
             peopleMetaInfoList.peopleList=people_list
             peopleMetaInfoList.img=image_to_process
             #publish metaData
             rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
             self.pub_people_meta_info.publish(peopleMetaInfoList)
-
             #compute display
             cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
             cv_img_to_display =self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
@@ -90,11 +101,11 @@ class PeopleMngNode():
             image_to_process=req.img
         peopleMetaInfoList=PeopleMetaInfoList()
         people_list=[]
-        result=self.detect_people_meta.processImg(image_to_process)
+        result=self.detect_people_meta.recognizePeople(image_to_process)
         for person in result.values():
             #rospy.logwarn('-')
             #rospy.logwarn(str(person))
-            current_peopleMeta=self.convertPeoplToRosMsg(person)
+            current_peopleMeta=self.convertPersonMetaInfoToRosMsg(person)
             people_list.append(current_peopleMeta)
         peopleMetaInfoList.peopleList=people_list
         return peopleMetaInfoList
@@ -122,17 +133,13 @@ class PeopleMngNode():
         #Process the image to detect/recognize people
         try:
             peopleMetaInfoList = PeopleMetaInfoList()
-            people_list = []
-            result = self.detect_people_meta.recognizePeople(image_to_process)
+            personMetaInfoMap = self.detect_people_meta.recognizePeople(image_to_process)
             #Process the detection output
-            for person in result.values():
+            for personMetaInfo in personMetaInfoMap.values():
                 rospy.logdebug('-')
-                rospy.logdebug(str(person))
-                current_peopleMeta = self.convertPeoplToRosMsg(person)
-                people_list.append(current_peopleMeta)
-            peopleMetaInfoList.peopleList = people_list
-            action_result.peopleMetaList = peopleMetaInfoList
-            isActionSucceed=True
+                rospy.logdebug(str(personMetaInfo))
+                action_result.peopleMetaList.peopleList.append(self.convertPersonMetaInfoToRosMsg(personMetaInfo))
+                isActionSucceed=True
         #Action output
         except Exception as e:
             rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(action_result), str(e))
@@ -150,7 +157,7 @@ class PeopleMngNode():
                 image_to_process = self.current_img
             else:
                  rospy.logwarn("current_img is currently no set, no image to process")
-                 self.actionServer_detect_people.set_aborted()
+                 self.actionServer_learn_people.set_aborted()
                  return
         else:
             image_to_process = goal.img
@@ -159,10 +166,14 @@ class PeopleMngNode():
         action_result = LearnPeopleFromImgResult()
         #Process the image to detect/recognize people
         try:
-            peopleMetaInfo = self.detect_people_meta.firstEncounter(image_to_process)
-            if peopleMetaInfo is not None:
+            personMetaInfo = self.detect_people_meta.firstEncounter(image_to_process, goal.name)
+            if personMetaInfo is not None:
+                #Prepare output
+                peopleMetaInfo = self.convertPersonMetaInfoToRosMsg(personMetaInfo)
                 action_result.peopleMetaInfo = peopleMetaInfo
                 isActionSucceed=True
+                #Save people meta info (ROS msg) in the map
+                self.peopleMetaInfoMap[goal.name] = peopleMetaInfo
         except Exception as e:
             rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(action_result), str(e))
         #Action output
@@ -171,7 +182,55 @@ class PeopleMngNode():
         else:
             self.actionServer_learn_people.set_aborted()
 
-    def convertPeoplToRosMsg(self,people):
+    def executeGetPeopleNameActionServer(self, goal):
+        """
+        Try to get the persons name from an image
+        """
+        # Check if any image as input
+        image_to_process = None
+        if len(goal.img.data) == 0:
+            # If not we take the existing current image
+            if self.current_img != None:
+                image_to_process = self.current_img
+            else:
+                rospy.logwarn("current_img is currently no set, no image to process")
+                self.actionServer_get_people_name.set_aborted()
+                return
+        else:
+            image_to_process = goal.img
+        #Init action outputs
+        isActionSucceed = False
+        action_result = GetPeopleNameFromImgResult()
+        #Actions
+        try:
+            #Process the image to detect/recognize people
+            personMetaInfoMap = self.detect_people_meta.recognizePeople(image_to_process)
+            #Process similaritie
+            for personMetaInfo in personMetaInfoMap.values():
+                rospy.logdebug('-')
+                rospy.logdebug(str(personMetaInfo))
+                peopleMetaInfo = self.convertPersonMetaInfoToRosMsg(personMetaInfo)
+                similaritiesMap = {}
+                max_score = 0.0
+                max_name = "Not found"
+                for name in self.peopleMetaInfoMap.keys():
+                    score = self.peopleMetaSimilarity.evaluate_people(peopleMetaInfoMap[name], peopleMetaInfo, Pose())
+                    if score > max_score:
+                        max_score = score
+                        max_name = name
+                #Update outputs
+                action_result.peopleNames.append(max_name)
+                action_result.peopleMetaList.peopleList.append(peopleMetaInfo)
+                isActionSucceed=True
+        except Exception as e:
+            rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(action_result), str(e))
+        #Action output
+        if isActionSucceed:
+            self.actionServer_get_people_name.set_succeeded(action_result)
+        else:
+            self.actionServer_get_people_name.set_aborted()
+
+    def convertPersonMetaInfoToRosMsg(self, people):
         rospy.logdebug(people)
         current_people=PeopleMetaInfo()
         current_people.id=str(people.id)

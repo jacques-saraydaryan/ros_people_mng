@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    ProcessPeopleFromImg.action
    LearnPeopleFromImg.action
+   GetPeopleNameFromImg.action
  )
 
 ## Generate added messages and services with any dependencies listed here
