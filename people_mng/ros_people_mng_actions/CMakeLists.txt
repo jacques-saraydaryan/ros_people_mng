@@ -12,10 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     std_msgs
     sensor_msgs
-    actionlib_msgs 
+    actionlib_msgs
     actionlib
     ros_people_mng_msgs
-    
+
 )
 
 
@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_action_files(
    FILES
    ProcessPeopleFromImg.action
+   LearnPeopleFromImg.action
  )
 
 ## Generate added messages and services with any dependencies listed here
