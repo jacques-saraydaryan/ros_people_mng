@@ -1,6 +1,6 @@
 sensor_msgs/Image img
 ---
-string peopleNames[]
+string[] peopleNames
 ros_people_mng_msgs/PeopleMetaInfoList peopleMetaList
 ---
 #feedback
