@@ -201,20 +201,21 @@ class PeopleMngNode():
         #Init action outputs
         isActionSucceed = False
         action_result = GetPeopleNameFromImgResult()
+        action_result.peopleMetaList.img = image_to_process
         #Actions
         try:
             #Process the image to detect/recognize people
             personMetaInfoMap = self.detect_people_meta.recognizePeople(image_to_process)
-            #Process similaritie
-            for personMetaInfo in personMetaInfoMap.values():
+            #Process similaritie with the already known people
+            for personMetaInfo in personMetaInfoMap.values(): #Loop on people found in the image
                 rospy.logdebug('-')
                 rospy.logdebug(str(personMetaInfo))
                 peopleMetaInfo = self.convertPersonMetaInfoToRosMsg(personMetaInfo)
-                similaritiesMap = {}
                 max_score = 0.0
                 max_name = "Not found"
-                for name in self.peopleMetaInfoMap.keys():
-                    score = self.peopleMetaSimilarity.evaluate_people(peopleMetaInfoMap[name], peopleMetaInfo, Pose())
+                for name in self.peopleMetaInfoMap.keys(): #Find correspondences with people name saved in the memory
+                    pose = Pose()
+                    score = self.peopleMetaSimilarity.evaluate_people(self.peopleMetaInfoMap[name], peopleMetaInfo, pose)
                     if score > max_score:
                         max_score = score
                         max_name = name

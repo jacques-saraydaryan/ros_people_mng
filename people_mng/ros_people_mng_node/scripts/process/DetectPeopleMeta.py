@@ -186,7 +186,7 @@ class DetectPeopleMeta():
             person_meta.label_score = score
         else:
             rospy.logwarn("No head bounding box for person_gossip:"+str(person_gossip.id))
-            person_meta.label_id = str('None')
+            person_meta.label_id = str('NoHead')
             person_meta.label_score = 0.0
         rospy.logdebug("---------------------------------------------------: FACE DETECTION timeElasped since last operation:" + str(
             round(time.time() - start_time, 3)) + "s")
