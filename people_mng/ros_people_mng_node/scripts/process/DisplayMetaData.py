@@ -93,8 +93,11 @@ class DisplayMetaData:
         self.meshMap[self.MESH_SITTING_HAND_RIGHT_POINTING] = self.MESH_SITTING_HAND_LEFT_POINTING
         self.meshMap[self.MESH_SITTING_HAND_CROSS] = self.MESH_SITTING_HAND_CROSS
 
-    def displayResult(self,content_result,img):  
-        for people in content_result.peopleList: 
+    def displayResult(self,content_result,img):
+        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('image', 600, 600)
+        for people in content_result.peopleList:
+            #img2=img.copy()
             if people.label_id!=self.PEOPLE_LABEL_UNKNOW and people.label_id!=self.PEOPLE_LABEL_NONE:
                 self.createRec(img,people.details.boundingBox.points,self.COLOR_1,2)
             else:
@@ -119,12 +122,15 @@ class DisplayMetaData:
 
             if  self.isColorRecDisplayer:
                 if  self.isProportionDisplayed:
-                    self.creatColorRecProporition(img,people.details.shirtRect.points,people.details.shirtColorList)
+                    self.creatColorRecProporition(imgr,people.details.shirtRect.points,people.details.shirtColorList)
                 self.createRec(img,people.details.shirtRect.points,(0,0,0),1)
 
             self.putTxtDistance(img,people.details.boundingBox.points,people,(255,255,255))
             
             self.putTxtIDLabel(img,people.details.boundingBox.points,people,(255,255,255))
+
+           # cv2.imshow('image', img2)
+           # cv2.waitKey(0)
 
         if self.isWaiting:
             cv2.namedWindow('image',cv2.WINDOW_NORMAL)
