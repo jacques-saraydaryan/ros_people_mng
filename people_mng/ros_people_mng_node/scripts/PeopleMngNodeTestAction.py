@@ -24,7 +24,7 @@ def LoadImgAndUseAction():
     #img_loaded1 = cv2.imread(test_folder+'/group-in-line.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/group-diff-position.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/couple.jpg')
-    #img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
+    img_loaded1 = cv2.imread(test_folder+'/group-sit.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/imgMulti4.png')
     #img_loaded1 = cv2.imread(test_folder+'/large-people.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/large-people2.jpg')
@@ -33,7 +33,7 @@ def LoadImgAndUseAction():
     #img_loaded1 = cv2.imread(test_folder+'/multiple_isolated3.jpg')
     #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper5.png')
     #img_loaded1 = cv2.imread(test_folder+'/imageFrontPepper4.png')
-    img_loaded1 = cv2.imread(test_folder + '/bbt4-s.jpg')
+    # img_loaded1 = cv2.imread(test_folder + '/bbt4-s.jpg') # NOT AVAILABLE IN REPOSITORY
 
     
 

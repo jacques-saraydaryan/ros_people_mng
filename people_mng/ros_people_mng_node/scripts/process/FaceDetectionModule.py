@@ -1,7 +1,7 @@
 __author__ ='Jacques Saraydaryan'
 
 
-import rospy 
+import rospy
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -20,9 +20,7 @@ class FaceDetectionModule():
             rospy.wait_for_service('/learn_face_from_img',5)
             rospy.wait_for_service('/get_img_from_id',5)
             rospy.wait_for_service('/detect_face_from_img',5)
-            
-
-            rospy.loginfo("service learn_face_from_img,get_img_from_id,detect_face_from_img READY")
+            rospy.loginfo("service learn_face_from_img, get_img_from_id, detect_face_from_img READY")
             self._faceLearnSrv = rospy.ServiceProxy('learn_face_from_img', LearnFaceFromImg)
             self._getImgFromIdSrv = rospy.ServiceProxy('get_img_from_id', GetImgFromId)
             self._detectFromImgSrv = rospy.ServiceProxy('detect_face_from_img', DetectFaceFromImg)
@@ -31,14 +29,14 @@ class FaceDetectionModule():
 
     def processFaceOnImg(self,img,label):
         try:
-            resp1=self._faceLearnSrv(label,img)
+            resp1 = self._faceLearnSrv(label, img)
             resp2 = self._getImgFromIdSrv(label)
             rospy.logdebug("Img of learnt label:"+str(label))
-            rospy.logdebug( "IMG:"+str(resp2))
+            rospy.logdebug("IMG:"+str(resp2))
             return resp2
         except rospy.ServiceException, e:
-             rospy.logwarn("Service call failed: %s"+str(e))
-             return None
+            rospy.logwarn("Service call failed: %s"+str(e))
+            return None
 
     def detectFaceOnImg(self,img,isImgFace):
         try:
@@ -50,5 +48,5 @@ class FaceDetectionModule():
                 #score=0
                 return resp1.entityList.entity2DList[0].label,score
         except rospy.ServiceException, e:
-             rospy.logwarn("Service call failed: %s"+str(e))
+            rospy.logwarn("Service call failed: %s"+str(e))
         return None,0.0
