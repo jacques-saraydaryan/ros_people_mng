@@ -6,6 +6,7 @@ import numpy as np
 import os
 import time
 import rospy
+from operator import itemgetter
 
 class StatMng:
 
@@ -102,6 +103,42 @@ class StatMng:
         fig, axs = plt.subplots(5, 1)
         #plt.subplot(311)
         rospy.loginfo(str(data_matrix))
+
+        # check here --> https://stackoverflow.com/questions/24432470/matplotlib-pyplot-in-real-time
+        # key_currnent_index = {}
+        #
+        # max_index=0
+        # for key in tracked_stat_map:
+        #     tracked_stat_map[key]=sorted(tracked_stat_map[key], key=itemgetter(0))
+        #     key_currnent_index[key]=0
+        #     if len(tracked_stat_map[key])>max_index:
+        #         max_index=len(tracked_stat_map[key])
+        #
+        #         # draw the figure so the animations will work
+        # fig = plt.gcf()
+        # fig.show()
+        # fig.canvas.draw()
+        #
+        # for i in range(0, max_index-1):
+        #     for key in tracked_stat_map:
+        #         #data_np = np.asarray(tracked_stat_map[key])
+        #         idex=key_currnent_index[key]
+        #         for p in range(key_currnent_index[key],len(tracked_stat_map[key])):
+        #             values=tracked_stat_map[key][p]
+        #             idex=idex+1
+        #             if values[0]<i:
+        #                 plt.plot(values[0],values[2],'ko--', label=key)
+        #                 key_currnent_index[key]=idex
+        #             else:
+        #                 break
+        #     # update canvas immediately
+        #     plt.xlim([0, 250])
+        #     plt.ylim([0, 1])
+        #     plt.pause(0.05)
+        #     fig.canvas.draw()
+
+
+
         for key in tracked_stat_map:
             data_np=np.asarray(tracked_stat_map[key])
             axs[0].set_title('General Score')
@@ -243,7 +280,7 @@ class StatMng:
 
 
 
-        fig, axs = plt.subplots(1, 1)
+Overleaf        fig, axs = plt.subplots(1, 1)
         #axs[0].set_aspect('equal')
         plt.matshow(data_list, cmap=plt.cm.inferno)
         plt.colorbar()
@@ -419,12 +456,12 @@ def main():
     #"""
 
     load_folder = '/tmp/'
-    file_name='0-PEOPLE_TRACKED_STAT.npy'
+    file_name='3-PEOPLE_TRACKED_STAT.npy'
     file_name2 = '3-PEOPLE_TRACKED_STAT_VS_TRACKED.npy'
     file_name3= '3-PEOPLE_VS_TRACKED.npy'
 
     statMng = StatMng(load_folder)
-    # statMng.load_and_display(load_folder,file_name)
+    statMng.load_and_display(load_folder,file_name)
     statMng.load_and_display_vs(load_folder, file_name2)
     statMng.load_and_display_people_vs_tracked(load_folder, file_name3)
 
