@@ -57,41 +57,43 @@ class PeopleMngNode():
         rospy.spin()
 
     def configure(self):
-        self.is_face_bounding_box_used=rospy.get_param('/is_face_bounding_box_used',False)
+        self.is_continuously_detecting = rospy.get_param('/is_continuously_detecting', False)
+        self.is_face_bounding_box_used = rospy.get_param('/is_face_bounding_box_used', False)
         rospy.loginfo("Param: is_face_bounding_box_used:"+str(self.is_face_bounding_box_used))
         self._bridge = CvBridge()
-        self.detect_people_meta=DetectPeopleMeta(self.is_face_bounding_box_used)
-        data_folder = rospy.get_param('imgtest_folder','../data')
-        self.displayMetaData = DisplayMetaData(data_folder+"/icon/",False,True,False)
+        self.detect_people_meta = DetectPeopleMeta(self.is_face_bounding_box_used)
+        data_folder = rospy.get_param('imgtest_folder', '../data')
+        self.displayMetaData = DisplayMetaData(data_folder+"/icon/", False, True, False)
 
     def rgb_callback(self, data):
         #FIXME need to protect to avoid concurrency?
         self.current_img = data
-        image_to_process = self.current_img
-        start_time=time.time()
-        rospy.logdebug("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
-        try:
-            peopleMetaInfoList=PeopleMetaInfoList()
-            people_list=[]
-            result=self.detect_people_meta.recognizePeople(image_to_process)
-            for person in result.values():
-                rospy.logdebug('-')
-                rospy.logdebug(str(person))
-                current_peopleMeta=self.convertPersonMetaInfoToRosMsg(person)
-                people_list.append(current_peopleMeta)
-            peopleMetaInfoList.peopleList=people_list
-            peopleMetaInfoList.img=image_to_process
-            #publish metaData
-            rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
-            self.pub_people_meta_info.publish(peopleMetaInfoList)
-            #compute display
-            cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
-            cv_img_to_display =self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
-            msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")
-            #publish image with MetaData
-            self.pub_people_meta_info_img.publish(msg_img)
-        except Exception as e:
-            rospy.logwarn("unable to find or launch function corresponding :, error:[%s]", str(e))
+        if self.is_continuously_detecting == True:
+            image_to_process = self.current_img
+            start_time=time.time()
+            rospy.logdebug("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
+            try:
+                peopleMetaInfoList = PeopleMetaInfoList()
+                people_list=[]
+                result=self.detect_people_meta.recognizePeople(image_to_process)
+                for person in result.values():
+                    rospy.logdebug('-')
+                    rospy.logdebug(str(person))
+                    current_peopleMeta = self.convertPersonMetaInfoToRosMsg(person)
+                    people_list.append(current_peopleMeta)
+                peopleMetaInfoList.peopleList = people_list
+                peopleMetaInfoList.img=image_to_process
+                # publish metaData
+                rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
+                self.pub_people_meta_info.publish(peopleMetaInfoList)
+                # compute display
+                cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
+                cv_img_to_display = self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
+                msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")
+                # publish image with MetaData
+                self.pub_people_meta_info_img.publish(msg_img)
+            except Exception as e:
+                rospy.logwarn("unable to find or launch function corresponding :, error:[%s]", str(e))
 
     def detectPeopleMetaSrvCallback(self, req):
         image_to_process=''
