@@ -201,11 +201,12 @@ class DetectPeopleMeta():
         rospy.logdebug(person_gossip)
         output = True
         # Find the head box
-        head_box = person_gossip.headRect.points
+        # box = person_gossip.headRect.points
+        box = person_gossip.boundingBox.points
         # If the head box is ok
-        if len(head_box) !=0:
+        if len(box) !=0:
             # Crop the head from the image
-            cv_img_crop = cv_img[int(head_box[0].y):int(head_box[1].y), int(head_box[0].x):int(head_box[1].x)]
+            cv_img_crop = cv_img[int(box[0].y):int(box[1].y), int(box[0].x):int(box[1].x)]
             img_crop = self._bridge.cv2_to_imgmsg(cv_img_crop, encoding="bgr8")
             # Learn from it
             img_id = self._faceProcess.processFaceOnImg(img_crop, name)

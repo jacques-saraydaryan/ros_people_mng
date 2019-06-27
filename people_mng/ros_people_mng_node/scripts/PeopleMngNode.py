@@ -222,16 +222,22 @@ class PeopleMngNode():
                 rospy.logdebug('-')
                 rospy.logdebug(str(personMetaInfo))
                 peopleMetaInfo = self.convertPersonMetaInfoToRosMsg(personMetaInfo)
-                max_score = 0.0
-                max_name = "Not found"
-                for name in self.peopleMetaInfoMap.keys(): #Find correspondences with people name saved in the memory
-                    pose = Pose()
-                    score = self.peopleMetaSimilarity.evaluate_people(self.peopleMetaInfoMap[name], peopleMetaInfo, pose)
-                    if score > max_score:
-                        max_score = score
-                        max_name = name
-                #Update outputs
-                action_result.peopleNames.append(max_name)
+                # max_score = -1.0
+                # max_name = ""
+                # for name in self.peopleMetaInfoMap.keys(): #Find correspondences with people name saved in the memory
+                #     pose = Pose()
+                #     score = self.peopleMetaSimilarity.evaluate_people(self.peopleMetaInfoMap[name], peopleMetaInfo, pose)[0]
+                #     if score > max_score:
+                #         max_score = score
+                #         max_name = name
+                # #Update outputs
+                # if max_score > 0.5:
+                #      action_result.peopleNames.append(max_name)
+                # else:
+                #      action_result.peopleNames.append("Unknown")
+                # action_result.peopleNamesScore.append(max_score)
+                action_result.peopleNames.append(peopleMetaInfo.label_id)
+                action_result.peopleNamesScore.append(peopleMetaInfo.label_score)
                 action_result.peopleMetaList.peopleList.append(peopleMetaInfo)
                 isActionSucceed=True
         except Exception as e:
