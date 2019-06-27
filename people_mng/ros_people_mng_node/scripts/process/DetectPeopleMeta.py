@@ -220,6 +220,11 @@ class DetectPeopleMeta():
             round(time.time() - start_time, 3)) + "s")
         return output
 
+    def deletePersonsFacesDb(self):
+        """
+        """
+        return self._faceProcess.deleteFacesFromDb()
+
     def firstEncounter(self, img, name):
         """
         First time meeting someone - Map his name and update the face database

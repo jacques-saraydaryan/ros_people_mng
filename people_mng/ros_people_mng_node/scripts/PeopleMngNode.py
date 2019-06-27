@@ -6,6 +6,7 @@ import time
 import rospy
 import actionlib
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
@@ -45,6 +46,7 @@ class PeopleMngNode():
         self.pub_people_meta_info_img = rospy.Publisher("/people_meta_info_img", Image, queue_size=1)
         # Declare ros service
         self.detectPeopleMetaSrv = rospy.Service('detect_people_meta_srv', ProcessPeopleFromImg, self.detectPeopleMetaSrvCallback)
+        self.resetPeopleMetaInfoMap = rospy.Service('reset_people_meta_info_map_srv', Trigger, self.resetPeopleMetaInfoMapSrvCallback)
         # Create action servers and start them
         self.actionServer_detect_people = actionlib.SimpleActionServer('detect_people_meta_action', ProcessPeopleFromImgAction, self.executePeopleMetaDetectionActionServer, False)
         self.actionServer_detect_people.start()
@@ -111,6 +113,13 @@ class PeopleMngNode():
             people_list.append(current_peopleMeta)
         peopleMetaInfoList.peopleList=people_list
         return peopleMetaInfoList
+
+    def resetPeopleMetaInfoMapSrvCallback(self, req):
+        self.peopleMetaInfoMap = {}
+        if (self.detect_people_meta.deletePersonsFacesDb() == True):
+            return True, "success"
+        else:
+            return False, "failed to erase faces database"
 
     def processImg(self, img):
         #TODO

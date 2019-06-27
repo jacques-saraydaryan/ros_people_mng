@@ -3,6 +3,7 @@ __author__ ='Jacques Saraydaryan'
 
 import rospy
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
@@ -20,10 +21,12 @@ class FaceDetectionModule():
             rospy.wait_for_service('/learn_face_from_img',5)
             rospy.wait_for_service('/get_img_from_id',5)
             rospy.wait_for_service('/detect_face_from_img',5)
+            rospy.wait_for_service('/delete_faces_from_database',5)
             rospy.loginfo("service learn_face_from_img, get_img_from_id, detect_face_from_img READY")
             self._faceLearnSrv = rospy.ServiceProxy('learn_face_from_img', LearnFaceFromImg)
             self._getImgFromIdSrv = rospy.ServiceProxy('get_img_from_id', GetImgFromId)
             self._detectFromImgSrv = rospy.ServiceProxy('detect_face_from_img', DetectFaceFromImg)
+            self._deleteFacesFromDbSrv = rospy.ServiceProxy('delete_faces_from_database', Trigger)
         except Exception as e:
             rospy.logwarn("Service learn_face_from_img,get_img_from_id,detect_face_from_img call failed: %s" % e)
 
@@ -50,3 +53,14 @@ class FaceDetectionModule():
         except rospy.ServiceException, e:
             rospy.logwarn("Service call failed: %s"+str(e))
         return None,0.0
+
+    def deleteFacesFromDb(self):
+        """
+        Delete faces from face recognition database
+        """
+        try:
+            resp1=self._deleteFacesFromDbSrv()
+            return resp1.success
+        except rospy.ServiceException, e:
+            rospy.logwarn("Service call failed: %s"+str(e))
+        return False
