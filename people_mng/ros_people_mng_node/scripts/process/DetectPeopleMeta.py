@@ -247,7 +247,7 @@ class DetectPeopleMeta():
         #Convert image msg to cv img for crop purpose
         cv_img = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
         #Learn Face
-        if self.learnPersonFace(person_gossip, cv_img, name) == False
+        if self.learnPersonFace(person_gossip, cv_img, name) == False :
             return None
         #Create person Meta
         person_meta = PersonMetaInfo(person_gossip.id)
@@ -264,7 +264,7 @@ class DetectPeopleMeta():
 
     def recognizePeople(self, img):
         """
-        Reconnaissance de personnes deja rencontrées précédemment
+        Reconnaissance de personnes deja rencontrees precedemment
         """
         #Get persons
         persons = self.getPeopleInImg(img)
@@ -289,7 +289,7 @@ class DetectPeopleMeta():
         for person_gossip in person_gossip.personsGossip.personsGossip:
             #Create person Meta
             person_meta = PersonMetaInfo(person_gossip.id)
-            person_meta.label_id = name
+            person_meta.label_id = person_gossip.name
             person_meta.posture = person_gossip.posture
             person_meta.handPosture = person_gossip.handPosture
             person_meta.distanceEval = person_gossip.distanceEval

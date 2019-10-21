@@ -1,9 +1,9 @@
 <launch>
 
   <arg name="camera_topic" value="/pepper_robot/camera/front/image_raw"/>
-  <!-- <arg name="camera_topic" value="/usb_cam/image_raw"/>  -->
-  <!-- <arg name="camera_topic_manager" value="/usb_cam/image_raw"/> -->
-    <arg name="camera_topic_manager" value="/pepper_robot/naoqi_driver/camera/front/image_raw"/>
+<!--   <arg name="camera_topic" value="/usb_cam/image_raw"/>-->
+   <arg name="camera_topic_manager" value="/usb_cam/image_raw"/>
+<!--    <arg name="camera_topic_manager" value="/pepper_robot/naoqi_driver/camera/front/image_raw"/>-->
 
 
 
