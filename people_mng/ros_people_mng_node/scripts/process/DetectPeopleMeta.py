@@ -186,7 +186,7 @@ class DetectPeopleMeta():
             person_meta.label_score = score
         else:
             rospy.logwarn("No head bounding box for person_gossip:"+str(person_gossip.id))
-            person_meta.label_id = str('None')
+            person_meta.label_id = str('NoHead')
             person_meta.label_score = 0.0
         rospy.logdebug("---------------------------------------------------: FACE DETECTION timeElasped since last operation:" + str(
             round(time.time() - start_time, 3)) + "s")
@@ -201,11 +201,12 @@ class DetectPeopleMeta():
         rospy.logdebug(person_gossip)
         output = True
         # Find the head box
-        head_box = person_gossip.headRect.points
+        # box = person_gossip.headRect.points
+        box = person_gossip.boundingBox.points
         # If the head box is ok
-        if len(head_box) !=0:
+        if len(box) !=0:
             # Crop the head from the image
-            cv_img_crop = cv_img[int(head_box[0].y):int(head_box[1].y), int(head_box[0].x):int(head_box[1].x)]
+            cv_img_crop = cv_img[int(box[0].y):int(box[1].y), int(box[0].x):int(box[1].x)]
             img_crop = self._bridge.cv2_to_imgmsg(cv_img_crop, encoding="bgr8")
             # Learn from it
             img_id = self._faceProcess.processFaceOnImg(img_crop, name)
@@ -220,36 +221,43 @@ class DetectPeopleMeta():
             round(time.time() - start_time, 3)) + "s")
         return output
 
+    def deletePersonsFacesDb(self):
+        """
+        """
+        return self._faceProcess.deleteFacesFromDb()
+
     def firstEncounter(self, img, name):
         """
-        Premiere rencontre avec une personne - Extraction des meta infos - Enregistrement visage
+        First time meeting someone - Map his name and update the face database
         """
-        #Get persons
+        # Get persons
         persons = self.getPeopleInImg(img)
-        #If no persons here : stop
+        # If no persons here : stop
         if persons is None:
             rospy.logwarn("Failed to detect person with OpenPose")
             return None
-        #If more than one person here : stop
+        # If more than one person here : stop
         if len(persons.persons) > 1:
             rospy.logwarn("More than 1 person detected. Unable to learn name.")
             return None
-        #We have persons - Time to get their gossip
+        # We have persons - Time to get their gossip
         persons.image_w = img.width
         persons.image_h = img.height
         persons_gossip = self.getPeopleGossip(persons)
-        #If no gossip here : stop
+        # If no gossip here : stop
         if persons_gossip is None:
             rospy.logwarn("Failed to get gossip from person detected with OpenPose")
             return None
-        #Get person gossip
+        # Get person gossip
         person_gossip = persons_gossip.personsGossip.personsGossip[0]
-        #Convert image msg to cv img for crop purpose
+        # Convert image msg to cv img for crop purpose
         cv_img = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
-        #Learn Face
-        if self.learnPersonFace(person_gossip, cv_img, name) == False :
+
+        # Learn Face
+        if self.learnPersonFace(person_gossip, cv_img, name) == False:
+
             return None
-        #Create person Meta
+        # Create person Meta
         person_meta = PersonMetaInfo(person_gossip.id)
         person_meta.label_id = name
         person_meta.posture = person_gossip.posture
@@ -257,49 +265,49 @@ class DetectPeopleMeta():
         person_meta.distanceEval = person_gossip.distanceEval
         person_meta.setBoundingBox(PersonMetaInfo.PERSON_RECT, person_gossip.boundingBox.points)
         person_meta.setPosition(person_gossip.pose)
-        #Get clothes colors
+        # Get clothes colors
         self.getPersonClothsColor(person_gossip, cv_img, person_meta)
-        #Output
+        # Output
         return person_meta
 
     def recognizePeople(self, img):
         """
-        Reconnaissance de personnes deja rencontrees precedemment
+        Recognize people that have been already met
         """
-        #Get persons
+        # Get persons
         persons = self.getPeopleInImg(img)
-        #If no persons here : stop
+        # If no persons here : stop
         if persons is None:
             rospy.logwarn("Failed to detect persons with OpenPose")
             return None
-        #We have persons - Time to get their gossip
+        # We have persons - Time to get their gossip
         persons.image_w = img.width
         persons.image_h = img.height
         persons_gossip = self.getPeopleGossip(persons)
-        #If no gossip here : stop
+        # If no gossip here : stop
         if persons_gossip is None:
             rospy.logwarn("Failed to get gossip from person detected with OpenPose")
             return None
-        #Get person gossip
-        person_gossip = persons_gossip.personsGossip.personsGossip[0]
-        #Convert image msg to cv img for crop purpose
+        # Convert image msg to cv img for crop purpose
         cv_img = self._bridge.imgmsg_to_cv2(img, desired_encoding="bgr8")
-        #Process everyone recognition
+        # Process everyone recognition
         personMetaInfoMap = {}
-        for person_gossip in person_gossip.personsGossip.personsGossip:
-            #Create person Meta
+        for person_gossip in persons_gossip.personsGossip.personsGossip:
+            # Create person Meta
             person_meta = PersonMetaInfo(person_gossip.id)
-            person_meta.label_id = person_gossip.name
+
+            #person_meta.label_id = person_gossip.name
+
             person_meta.posture = person_gossip.posture
             person_meta.handPosture = person_gossip.handPosture
             person_meta.distanceEval = person_gossip.distanceEval
             person_meta.setBoundingBox(PersonMetaInfo.PERSON_RECT, person_gossip.boundingBox.points)
             person_meta.setPosition(person_gossip.pose)
-            #Label the face
+            # Label the face
             self.recognizePersonFace(person_gossip, cv_img, person_meta)
-            #Get clothes colors
+            # Get clothes colors
             self.getPersonClothsColor(person_gossip, cv_img, person_meta)
-            #Copy the meta information in the global map
+            # Copy the meta information in the global map
             personMetaInfoMap[person_meta.id]=copy.deepcopy(person_meta)
         #Output
         return personMetaInfoMap

@@ -6,6 +6,7 @@ import time
 import rospy
 import actionlib
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
@@ -45,6 +46,7 @@ class PeopleMngNode():
         self.pub_people_meta_info_img = rospy.Publisher("/people_meta_info_img", Image, queue_size=1)
         # Declare ros service
         self.detectPeopleMetaSrv = rospy.Service('detect_people_meta_srv', ProcessPeopleFromImg, self.detectPeopleMetaSrvCallback)
+        self.resetPeopleMetaInfoMap = rospy.Service('reset_people_meta_info_map_srv', Trigger, self.resetPeopleMetaInfoMapSrvCallback)
         # Create action servers and start them
         self.actionServer_detect_people = actionlib.SimpleActionServer('detect_people_meta_action', ProcessPeopleFromImgAction, self.executePeopleMetaDetectionActionServer, False)
         self.actionServer_detect_people.start()
@@ -57,41 +59,43 @@ class PeopleMngNode():
         rospy.spin()
 
     def configure(self):
-        self.is_face_bounding_box_used=rospy.get_param('/is_face_bounding_box_used',False)
+        self.is_continuously_detecting = rospy.get_param('/is_continuously_detecting', False)
+        self.is_face_bounding_box_used = rospy.get_param('/is_face_bounding_box_used', False)
         rospy.loginfo("Param: is_face_bounding_box_used:"+str(self.is_face_bounding_box_used))
         self._bridge = CvBridge()
-        self.detect_people_meta=DetectPeopleMeta(self.is_face_bounding_box_used)
-        data_folder = rospy.get_param('imgtest_folder','../data')
-        self.displayMetaData = DisplayMetaData(data_folder+"/icon/",False,True,False)
+        self.detect_people_meta = DetectPeopleMeta(self.is_face_bounding_box_used)
+        data_folder = rospy.get_param('imgtest_folder', '../data')
+        self.displayMetaData = DisplayMetaData(data_folder+"/icon/", False, True, False)
 
     def rgb_callback(self, data):
         #FIXME need to protect to avoid concurrency?
         self.current_img = data
-        image_to_process = self.current_img
-        start_time=time.time()
-        rospy.logdebug("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
-        try:
-            peopleMetaInfoList=PeopleMetaInfoList()
-            people_list=[]
-            result=self.detect_people_meta.recognizePeople(image_to_process)
-            for person in result.values():
-                rospy.logdebug('-')
-                rospy.logdebug(str(person))
-                current_peopleMeta=self.convertPersonMetaInfoToRosMsg(person)
-                people_list.append(current_peopleMeta)
-            peopleMetaInfoList.peopleList=people_list
-            peopleMetaInfoList.img=image_to_process
-            #publish metaData
-            rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
-            self.pub_people_meta_info.publish(peopleMetaInfoList)
-            #compute display
-            cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
-            cv_img_to_display =self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
-            msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")
-            #publish image with MetaData
-            self.pub_people_meta_info_img.publish(msg_img)
-        except Exception as e:
-            rospy.logwarn("unable to find or launch function corresponding :, error:[%s]", str(e))
+        if self.is_continuously_detecting == True:
+            image_to_process = self.current_img
+            start_time=time.time()
+            rospy.logdebug("---------------------------------------------------: timeElasped since start:"+str(0)+"s")
+            try:
+                peopleMetaInfoList = PeopleMetaInfoList()
+                people_list=[]
+                result=self.detect_people_meta.recognizePeople(image_to_process)
+                for person in result.values():
+                    rospy.logdebug('-')
+                    rospy.logdebug(str(person))
+                    current_peopleMeta = self.convertPersonMetaInfoToRosMsg(person)
+                    people_list.append(current_peopleMeta)
+                peopleMetaInfoList.peopleList = people_list
+                peopleMetaInfoList.img=image_to_process
+                # publish metaData
+                rospy.logdebug( "---------------------------------------------------: timeElasped since start:" + str(round(time.time()-start_time,3)) + "s")
+                self.pub_people_meta_info.publish(peopleMetaInfoList)
+                # compute display
+                cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
+                cv_img_to_display = self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
+                msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")
+                # publish image with MetaData
+                self.pub_people_meta_info_img.publish(msg_img)
+            except Exception as e:
+                rospy.logwarn("unable to find or launch function corresponding :, error:[%s]", str(e))
 
     def detectPeopleMetaSrvCallback(self, req):
         image_to_process=''
@@ -109,6 +113,13 @@ class PeopleMngNode():
             people_list.append(current_peopleMeta)
         peopleMetaInfoList.peopleList=people_list
         return peopleMetaInfoList
+
+    def resetPeopleMetaInfoMapSrvCallback(self, req):
+        self.peopleMetaInfoMap = {}
+        if (self.detect_people_meta.deletePersonsFacesDb() == True):
+            return True, "success"
+        else:
+            return False, "failed to erase faces database"
 
     def processImg(self, img):
         #TODO
@@ -201,25 +212,32 @@ class PeopleMngNode():
         #Init action outputs
         isActionSucceed = False
         action_result = GetPeopleNameFromImgResult()
+        action_result.peopleMetaList.img = image_to_process
         #Actions
         try:
             #Process the image to detect/recognize people
             personMetaInfoMap = self.detect_people_meta.recognizePeople(image_to_process)
-            #Process similaritie
-            for personMetaInfo in personMetaInfoMap.values():
+            #Process similaritie with the already known people
+            for personMetaInfo in personMetaInfoMap.values(): #Loop on people found in the image
                 rospy.logdebug('-')
                 rospy.logdebug(str(personMetaInfo))
                 peopleMetaInfo = self.convertPersonMetaInfoToRosMsg(personMetaInfo)
-                similaritiesMap = {}
-                max_score = 0.0
-                max_name = "Not found"
-                for name in self.peopleMetaInfoMap.keys():
-                    score = self.peopleMetaSimilarity.evaluate_people(peopleMetaInfoMap[name], peopleMetaInfo, Pose())
-                    if score > max_score:
-                        max_score = score
-                        max_name = name
-                #Update outputs
-                action_result.peopleNames.append(max_name)
+                # max_score = -1.0
+                # max_name = ""
+                # for name in self.peopleMetaInfoMap.keys(): #Find correspondences with people name saved in the memory
+                #     pose = Pose()
+                #     score = self.peopleMetaSimilarity.evaluate_people(self.peopleMetaInfoMap[name], peopleMetaInfo, pose)[0]
+                #     if score > max_score:
+                #         max_score = score
+                #         max_name = name
+                # #Update outputs
+                # if max_score > 0.5:
+                #      action_result.peopleNames.append(max_name)
+                # else:
+                #      action_result.peopleNames.append("Unknown")
+                # action_result.peopleNamesScore.append(max_score)
+                action_result.peopleNames.append(peopleMetaInfo.label_id)
+                action_result.peopleNamesScore.append(peopleMetaInfo.label_score)
                 action_result.peopleMetaList.peopleList.append(peopleMetaInfo)
                 isActionSucceed=True
         except Exception as e:
