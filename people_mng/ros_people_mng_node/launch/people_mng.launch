@@ -2,25 +2,26 @@
 
   <!-- <arg name="camera_topic" value="/pepper_robot/camera/front/image_raw"/> -->
   <!-- <arg name="camera_topic" value="/webcam/image_raw"/> -->
-  <arg name="camera_topic" value="/kinect/color/image_raw"/>
+  <!-- <arg name="camera_topic" value="/kinect/color/image_raw"/> -->
 
-<!--   <arg name="camera_topic" value="/usb_cam/image_raw"/>-->
-   <!-- <arg name="camera_topic_manager" value="/usb_cam/image_raw"/> -->
+   <arg name="camera_topic" value="/usb_cam/image_raw"/>
+    <arg name="camera_topic_manager" value="/usb_cam/image_raw"/>
    <!-- <arg name="camera_topic_manager" value="/webcam/image_raw"/> -->
-  <arg name="camera_topic_manager" value="/kinect/color/image_raw"/>
+ <!-- <arg name="camera_topic_manager" value="/kinect/color/image_raw"/> -->
 <!--    <arg name="camera_topic_manager" value="/pepper_robot/naoqi_driver/camera/front/image_raw"/>-->
 
   <arg name="result_image_topic" value="/openpose/image_raw"/>
   <arg name="resolution" value="480x320"/>
   <arg name="active_face" value="false"/>
 
+<!-- Done in docker containers
   <include file="$(find openpose_ros_node)/launch/openpose.launch">
     <arg name="camera_topic" value="$(arg camera_topic)"/>
     <arg name="result_image_topic" value="$(arg result_image_topic)"/>
     <arg name="resolution" value="$(arg resolution)"/>
     <arg name="active_face" value="$(arg active_face)"/>
   </include>
-
+-->
   <include file="$(find people_face_identification)/launch/face_identification.launch">
   </include>
 

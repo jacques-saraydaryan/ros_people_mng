@@ -41,7 +41,7 @@ class PeopleMngNode():
         self.peopleMetaSimilarity.CURRENT_POSE_SCORE = self.peopleMetaSimilarity.PROCESS_POSE_NONE_SCORE #No pose
         self.peopleMetaSimilarity.WEIGHT_POSE_SCORE = 0
         # Subscribe to the image
-        self.sub_rgb = rospy.Subscriber("/image", Image, self.rgb_callback, queue_size=1)
+        self.sub_rgb = rospy.Subscriber("/image", Image, self.rgb_callback, queue_size=1, buff_size=2**24)
         self.pub_people_meta_info = rospy.Publisher("/people_meta_info", PeopleMetaInfoList, queue_size=1)
         self.pub_people_meta_info_img = rospy.Publisher("/people_meta_info_img", Image, queue_size=1)
         self.pub_people_meta_info_without_img = rospy.Publisher("/people_meta_info_only",PeopleMetaInfoListWithoutImg,queue_size=1)
