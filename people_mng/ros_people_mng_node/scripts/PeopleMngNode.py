@@ -19,7 +19,7 @@ from ros_people_mng_msgs.msg import PeopleMetaInfoDetails, PeopleMetaInfo, Peopl
 from ros_people_mng_actions.msg import ProcessPeopleFromImgAction, ProcessPeopleFromImgResult
 from ros_people_mng_actions.msg import LearnPeopleFromImgAction, LearnPeopleFromImgResult
 from ros_people_mng_actions.msg import GetPeopleNameFromImgAction, GetPeopleNameFromImgResult
-from ros_people_mng_srvs.srv import ProcessPeopleFromImg, TakePictureService, TakePictureServiceResponse
+from ros_people_mng_srvs.srv import ProcessPeopleFromImg, TakePictureService, TakePictureServiceResponse, GetPeopleFromName, GetPeopleFromNameResponse
 
 from process.DetectPeopleMeta import DetectPeopleMeta
 from process.PersonMetaInfo import PersonMetaInfo
@@ -50,6 +50,7 @@ class PeopleMngNode():
         self.detectPeopleMetaSrv = rospy.Service('detect_people_meta_srv', ProcessPeopleFromImg, self.detectPeopleMetaSrvCallback)
         self.resetPeopleMetaInfoMap = rospy.Service('reset_people_meta_info_map_srv', Trigger, self.resetPeopleMetaInfoMapSrvCallback)
         self.takePictureService = rospy.Service('take_picture_service',TakePictureService, self.takePictureServiceCallback)
+        self.takePictureService = rospy.Service('get_people_metainfo_from_name',GetPeopleFromName, self.getPeopleMetaInfofromNameCallback)
 
 
         # Create action servers and start them
@@ -153,6 +154,19 @@ class PeopleMngNode():
     def processImg(self, img):
         #TODO
         pass
+
+    def getPeopleMetaInfofromNameCallback(self,req):
+        response = GetPeopleFromNameResponse()
+        try:
+            #Get people meta info (ROS msg) in the map
+           metaInfo = self.peopleMetaInfoMap[req.name]
+           response.peopleMetaInfo = metaInfo
+           # TODO
+           #response.img = ...
+        except KeyError :
+            rospy.logwarn("Name:"+str(req.name)+" is currently no set, no metadata to retreive")
+        return response
+        
 
     def executePeopleMetaDetectionActionServer(self, goal):
         # Check if any image as input

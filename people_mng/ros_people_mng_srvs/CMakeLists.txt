@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    ProcessPeopleFromImg.srv
    TakePictureService.srv
+   GetPeopleFromName.srv
  )
 
 ## Generate added messages and services with any dependencies listed here

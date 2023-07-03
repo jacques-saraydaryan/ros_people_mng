@@ -1,0 +1,7 @@
+#Name of the learnt people
+string name
+---
+#Get Associated meta info on the targeted people
+ros_people_mng_msgs/PeopleMetaInfo peopleMetaInfo
+#get Face image (or body image) associated to the targeted people
+sensor_msgs/Image img
