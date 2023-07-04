@@ -3,9 +3,15 @@
   <!-- <arg name="camera_topic" value="/pepper_robot/camera/front/image_raw"/> -->
   <!-- <arg name="camera_topic" value="/webcam/image_raw"/> -->
   <!-- <arg name="camera_topic" value="/kinect/color/image_raw"/> -->
-
+<!--
    <arg name="camera_topic" value="/usb_cam/image_raw"/>
     <arg name="camera_topic_manager" value="/usb_cam/image_raw"/>
+-->
+   <arg name="camera_topic" value="/kinect2/hd/image_color"/>
+  <arg name="camera_topic_manager" value="/kinect2/hd/image_color"/>
+
+
+
    <!-- <arg name="camera_topic_manager" value="/webcam/image_raw"/> -->
  <!-- <arg name="camera_topic_manager" value="/kinect/color/image_raw"/> -->
 <!--    <arg name="camera_topic_manager" value="/pepper_robot/naoqi_driver/camera/front/image_raw"/>-->
@@ -33,9 +39,11 @@
   </node>
 
   <rosparam file="$(find ros_people_mng_node)/config/common_people_mng.yaml" />
+  
   <node pkg="ros_people_mng_node" type="PeopleMngNode.py" name="PeopleMngNode"  output="screen" >
       <remap from="image" to="$(arg camera_topic_manager)"/> 
   </node> 
+  
 
 
 </launch>

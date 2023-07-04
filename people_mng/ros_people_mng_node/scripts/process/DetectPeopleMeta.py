@@ -10,10 +10,12 @@ import cv2
 import numpy as np
 import random
 import copy
+import math
 
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point32
 from openpose_ros_srvs.srv import DetectPeoplePoseFromImg
+from openpose_ros_msgs.msg import Persons
 from ros_color_detection_srvs.srv import DetectColorFromImg
 
 from ros_people_mng_msgs.msg import PeopleMetaInfo,PeopleMetaInfoList
@@ -236,13 +238,18 @@ class DetectPeopleMeta():
         if persons is None:
             rospy.logwarn("Failed to detect person with OpenPose")
             return None
+    
         # If more than one person here : stop
         if len(persons.persons) > 1:
-            rospy.logwarn("More than 1 person detected. Unable to learn name.")
-            return None
-        # We have persons - Time to get their gossip
-        persons.image_w = img.width
-        persons.image_h = img.height
+            rospy.logwarn("More than 1 person detected. try to find the largest BOX.")
+            persons=self._get_big_detected_pose(persons)
+            persons.image_w = img.width
+            persons.image_h = img.height
+            # return None
+        else:
+            # We have persons - Time to get their gossip
+            persons.image_w = img.width
+            persons.image_h = img.height
         persons_gossip = self.getPeopleGossip(persons)
         # If no gossip here : stop
         if persons_gossip is None:
@@ -316,3 +323,59 @@ class DetectPeopleMeta():
         x=random.uniform(0, h)
         y=random.uniform(0, w)
         return x,y
+    
+    def _get_big_detected_pose(self,persons):
+        new_persons = Persons() 
+        new_persons.image_w = persons.image_w
+        new_persons.image_h = persons.image_h
+ 
+        max_size = 0
+        largest_person = {}
+        largest_width = 0
+        largest_height = 0
+        for person in persons.persons:
+            # get diag size
+            size, width, height = self._get_box_size(person)
+            if size > max_size:
+                max_size= size
+                largest_person = person
+     
+        new_persons.persons = [largest_person]
+        return new_persons
+
+    def _get_box_size(self,person):
+        min_x = 999999
+        max_x = 0
+        min_y = 999999
+        max_y = 0
+
+        for body_pose in person.body_part:
+               if body_pose.x > max_x:
+                max_x = body_pose.x 
+
+                if body_pose.x < min_x:
+                    min_x = body_pose.x 
+
+                if body_pose.y > max_y:
+                    max_y = body_pose.y 
+
+                if body_pose.y < min_y:
+                    min_y = body_pose.y
+
+        for face_pose in person.face_landmark:
+                if face_pose.x > max_x:
+                    max_x = body_pose.x 
+
+                    if face_pose.x < min_x:
+                        min_x = body_pose.x 
+
+                    if face_pose.y > max_y:
+                        max_y = body_pose.y 
+
+                    if face_pose.y < min_y:
+                        min_y = body_pose.y
+        width = max_x - min_x
+        height = max_y - min_y
+        return math.sqrt(math.pow(max_x-min_x,2)+math.pow(max_y-min_y,2)), width , height
+
+
