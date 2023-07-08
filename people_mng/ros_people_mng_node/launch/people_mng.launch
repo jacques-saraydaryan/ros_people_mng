@@ -6,9 +6,10 @@
 <!--
    <arg name="camera_topic" value="/usb_cam/image_raw"/>
     <arg name="camera_topic_manager" value="/usb_cam/image_raw"/>
--->
-   <arg name="camera_topic" value="/kinect2/hd/image_color"/>
-  <arg name="camera_topic_manager" value="/kinect2/hd/image_color"/>
+    -->
+
+  <arg name="camera_topic" value="/kinect/hd/image_color"/>
+  <arg name="camera_topic_manager" value="/kinect/hd/image_color"/>
 
 
 

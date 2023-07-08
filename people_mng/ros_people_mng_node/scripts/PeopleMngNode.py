@@ -27,7 +27,6 @@ from process.DisplayMetaData import DisplayMetaData
 from process.PeopleMetaSimilarity import PeopleMetaSimilarity
 from geometry_msgs.msg import Point32
 from geometry_msgs.msg import Pose
-
 class PeopleMngNode():
 
     def __init__(self):
@@ -100,7 +99,7 @@ class PeopleMngNode():
                 self.pub_people_meta_info.publish(peopleMetaInfoList)
                 self.pub_people_meta_info_without_img.publish(peopleMetaInfoListWithoutImg)
 
-
+                
                 # compute display
                 cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
                 cv_img_to_display = self.displayMetaData.displayResult(peopleMetaInfoList,cv_image)
@@ -230,6 +229,23 @@ class PeopleMngNode():
                 self.peopleMetaInfoMap[goal.name] = peopleMetaInfo
         except Exception as e:
             rospy.logwarn("unable to find or launch function corresponding to the action %s:, error:[%s]",str(action_result), str(e))
+        
+        # display img and marker
+        cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
+        for people in self.peopleMetaInfoMap.values():
+            self.displayMetaData.displayOnePerson(people, cv_image)
+        msg_img = self._bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+        self.pub_people_meta_info_img.publish(msg_img)
+
+        
+        # compute display
+        #cv_image = self._bridge.imgmsg_to_cv2(image_to_process, desired_encoding="bgr8")
+        #cv_img_to_display = self.displayMetaData.displayResult( self.peopleMetaInfoMap.values(),cv_image)
+        #msg_img = self._bridge.cv2_to_imgmsg(cv_img_to_display, encoding="bgr8")
+        ## publish image with MetaData
+        #self.pub_people_meta_info_img.publish(msg_img)
+        
+        
         #Action output
         if isActionSucceed:
             self.actionServer_learn_people.set_succeeded(action_result)
@@ -311,6 +327,23 @@ class PeopleMngNode():
         current_people.details=current_people_details
         current_people.pose=people.pose
         return current_people
+    
+    ## FIXME TO BE COMPLETED
+    def displayTrackerResult(self, tracked_people_list, img):
+        for tracked_people in tracked_people_list:
+            points=tracked_people.getBoundingBox(PersonMetaInfo.PERSON_RECT).points
+            if tracked_people.label_id != self.PEOPLE_LABEL_UNKNOW and tracked_people.label_id != self.PEOPLE_LABEL_NONE:
+                self.createRec(img, points, self.COLOR_1, 10)
+            else:
+                self.createRec(img, points, self.COLOR_2, 2)
+
+        if self.isWaiting:
+            cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('image', 600, 600)
+            cv2.imshow('image', img)
+            cv2.waitKey(0)
+
+        return img
 
 
 def main():

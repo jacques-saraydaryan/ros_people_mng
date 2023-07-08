@@ -93,41 +93,76 @@ class DisplayMetaData:
         self.meshMap[self.MESH_SITTING_HAND_RIGHT_POINTING] = self.MESH_SITTING_HAND_LEFT_POINTING
         self.meshMap[self.MESH_SITTING_HAND_CROSS] = self.MESH_SITTING_HAND_CROSS
 
-    def displayResult(self,content_result,img):
+
+    def displayOnePerson(self, people, img):
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('image', 600, 600)
-        for people in content_result.peopleList:
-            #img2=img.copy()
-            if people.label_id!=self.PEOPLE_LABEL_UNKNOW and people.label_id!=self.PEOPLE_LABEL_NONE:
+        if people.label_id!=self.PEOPLE_LABEL_UNKNOW and people.label_id!=self.PEOPLE_LABEL_NONE:
                 self.createRec(img,people.details.boundingBox.points,self.COLOR_1,2)
-            else:
+        else:
                 self.createRec(img,people.details.boundingBox.points,self.COLOR_2,2)
-            
-            if len(people.details.boundingBox.points)>=2:
+        if len(people.details.boundingBox.points)>=2:
                 self.delta_y=int(round(people.details.boundingBox.points[0].y))
                 self.displayIconPosture(img,people.details.boundingBox.points,people,20,0)
                 self.displayIconHandLeftPosture(img,people.details.boundingBox.points,people,0,0)
                 self.displayIconHandRightPosture(img,people.details.boundingBox.points,people,20,20)
+        font = cv2.FONT_HERSHEY_DUPLEX
+        self.displayColorRec(img,people.details.boundingBox.points,people.details.shirtColorList,20,0)
+        cv2.putText(img, people.shirt_color_name, (int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12),  font, 0.5, (0, 0, 0), 1)
+        self.displayColorRec(img,people.details.boundingBox.points,people.details.trouserColorList,20,0)
+        cv2.putText(img, people.trouser_color_name,(int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12), font, 0.5, (0, 0, 0), 1)
+        
+        if  self.isColorRecDisplayer:
+            if  self.isProportionDisplayed:
+                self.creatColorRecProporition(img,people.details.trouserRect.points,people.details.trouserColorList)
+            self.createRec(img,people.details.trouserRect.points,(0,0,0),1)
+        if  self.isColorRecDisplayer:
+            if  self.isProportionDisplayed:
+                self.creatColorRecProporition(imgr,people.details.shirtRect.points,people.details.shirtColorList)
+            self.createRec(img,people.details.shirtRect.points,(0,0,0),1)
+        self.putTxtDistance(img,people.details.boundingBox.points,people,(255,255,255))
+        
+        self.putTxtIDLabel(img,people.details.boundingBox.points,people,(255,255,255))
 
-            font = cv2.FONT_HERSHEY_DUPLEX
-            self.displayColorRec(img,people.details.boundingBox.points,people.details.shirtColorList,20,0)
-            cv2.putText(img, people.shirt_color_name, (int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12),  font, 0.5, (0, 0, 0), 1)
-            self.displayColorRec(img,people.details.boundingBox.points,people.details.trouserColorList,20,0)
-            cv2.putText(img, people.trouser_color_name,(int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12), font, 0.5, (0, 0, 0), 1)
+        #cv2.imshow('image', img)
+        #cv2.waitKey(0)
+
+    def displayResult(self,content_result,img):
+        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        #cv2.resizeWindow('image', 600, 600)
+        for people in content_result.peopleList:
+            self.displayOnePerson(people,img)
+            ##img2=img.copy()
+            #if people.label_id!=self.PEOPLE_LABEL_UNKNOW and people.label_id!=self.PEOPLE_LABEL_NONE:
+            #    self.createRec(img,people.details.boundingBox.points,self.COLOR_1,2)
+            #else:
+            #    self.createRec(img,people.details.boundingBox.points,self.COLOR_2,2)
+            #
+            #if len(people.details.boundingBox.points)>=2:
+            #    self.delta_y=int(round(people.details.boundingBox.points[0].y))
+            #    self.displayIconPosture(img,people.details.boundingBox.points,people,20,0)
+            #    self.displayIconHandLeftPosture(img,people.details.boundingBox.points,people,0,0)
+            #    self.displayIconHandRightPosture(img,people.details.boundingBox.points,people,20,20)
+#
+            #font = cv2.FONT_HERSHEY_DUPLEX
+            #self.displayColorRec(img,people.details.boundingBox.points,people.details.shirtColorList,20,0)
+            #cv2.putText(img, people.shirt_color_name, (int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12),  font, 0.5, (0, 0, 0), 1)
+            #self.displayColorRec(img,people.details.boundingBox.points,people.details.trouserColorList,20,0)
+            #cv2.putText(img, people.trouser_color_name,(int(round(people.details.boundingBox.points[1].x) + 22), self.delta_y-20 + 12), font, 0.5, (0, 0, 0), 1)
+            #
+            #if  self.isColorRecDisplayer:
+            #    if  self.isProportionDisplayed:
+            #        self.creatColorRecProporition(img,people.details.trouserRect.points,people.details.trouserColorList)
+            #    self.createRec(img,people.details.trouserRect.points,(0,0,0),1)
+#
+            #if  self.isColorRecDisplayer:
+            #    if  self.isProportionDisplayed:
+            #        self.creatColorRecProporition(imgr,people.details.shirtRect.points,people.details.shirtColorList)
+            #    self.createRec(img,people.details.shirtRect.points,(0,0,0),1)
+#
+            #self.putTxtDistance(img,people.details.boundingBox.points,people,(255,255,255))
             
-            if  self.isColorRecDisplayer:
-                if  self.isProportionDisplayed:
-                    self.creatColorRecProporition(img,people.details.trouserRect.points,people.details.trouserColorList)
-                self.createRec(img,people.details.trouserRect.points,(0,0,0),1)
-
-            if  self.isColorRecDisplayer:
-                if  self.isProportionDisplayed:
-                    self.creatColorRecProporition(imgr,people.details.shirtRect.points,people.details.shirtColorList)
-                self.createRec(img,people.details.shirtRect.points,(0,0,0),1)
-
-            self.putTxtDistance(img,people.details.boundingBox.points,people,(255,255,255))
-            
-            self.putTxtIDLabel(img,people.details.boundingBox.points,people,(255,255,255))
+            #self.putTxtIDLabel(img,people.details.boundingBox.points,people,(255,255,255))
 
            # cv2.imshow('image', img2)
            # cv2.waitKey(0)
